@@ -2,3 +2,8 @@ datasetaudio.zip
 test/
 train/
 push.bash
+.vscode
+venv
+dataset
+__pycache__
+save/
