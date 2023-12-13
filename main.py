@@ -19,7 +19,7 @@ def listen(args):
     if not SOUND:
         message = "Sounddevice module not found. You won't be able to listen to the audio."
         raise AssertionError(message)
-    dataset = loader.SoundDataset(DATASET_PATH, lenght=args.lenght)
+    dataset = loader.SoundDataset(DATASET_PATH, length=args.length)
     audio, target = dataset.__getitem__(args.id)
         
     if args.audio == 0:
@@ -36,9 +36,9 @@ def train(args):
     Network = get_network(1)
     model = Network(1)
     model.to(device)
-    dataset = loader.SoundDataset(DATASET_PATH, lenght=args.lenght, reduce=args.reduce, partition=args.partition)
+    dataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition)
     traindataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True)
-    testdataset = loader.SoundDataset(DATASET_PATH, lenght=args.lenght, train=False, reduce=args.reduce)
+    testdataset = loader.SoundDataset(DATASET_PATH, length=args.length, train=False, reduce=args.reduce)
     
     for epoch in range(args.epochs):
         for audio, target in tqdm(traindataloader):
@@ -54,7 +54,7 @@ def main():
     listen_parser = subparsers.add_parser(
         "listen", help="Play an exemple of the dataset")
     listen_parser.add_argument(
-        "--lenght", help="lenght of the audio signal", type=int, default=32000)
+        "--length", help="length of the audio signal", type=int, default=32000)
     listen_parser.add_argument(
         "--audio", help="Which audio to play : 0 for combined audio, 1 and 2 for individual audio", type=int, choices=[0, 1, 2], default=0)
     listen_parser.add_argument("--id", help="id of the audio", type=int, default=0)
@@ -63,7 +63,7 @@ def main():
     train_parser = subparsers.add_parser(
         "train", help="Train the model")
     train_parser.add_argument(
-        "--lenght", help="lenght of the audio signal", type=int, default=32000)
+        "--length", help="length of the audio signal", type=int, default=32000)
     train_parser.add_argument(
         "--epochs", help="number of epochs", type=int, default=10)
     train_parser.add_argument(
