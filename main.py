@@ -37,7 +37,7 @@ def train(args):
     model = Network(1)
     model.to(device)
     dataset = loader.SoundDataset(DATASET_PATH, lenght=args.lenght, reduce=args.reduce, partition=args.partition)
-    traindataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
+    traindataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True)
     testdataset = loader.SoundDataset(DATASET_PATH, lenght=args.lenght, train=False, reduce=args.reduce)
     
     for epoch in range(args.epochs):
@@ -67,7 +67,7 @@ def main():
     train_parser.add_argument(
         "--epochs", help="number of epochs", type=int, default=10)
     train_parser.add_argument(
-        "--batch_size", help="batch size", type=int, default=32)
+        "--batch", help="batch size", type=int, default=32)
     train_parser.add_argument(
         "--reduce", help="reduce the dataset size by this percent", type=float, default=0)
     train_parser.add_argument(
