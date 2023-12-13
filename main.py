@@ -4,12 +4,21 @@ from tqdm.auto import tqdm
 import torch
 from torch.utils.data import DataLoader
 
-import sounddevice as sd
+try:
+    import sounddevice as sd
+    SOUND = True
+except ModuleNotFoundError as e:
+    print("Warning: sounddevice module not found. You won't be able to listen to the audio.")
+    print(e)
+    SOUND = False
 
 import loader
 from models import get_network
 
 def listen(args):
+    if not SOUND:
+        message = "Sounddevice module not found. You won't be able to listen to the audio."
+        raise AssertionError(message)
     dataset = loader.SoundDataset(DATASET_PATH, lenght=args.lenght)
     audio, target = dataset.__getitem__(args.id)
         
