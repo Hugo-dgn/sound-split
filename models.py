@@ -42,14 +42,9 @@ class Network1(nn.Module):
             nn.Conv1d(in_channels=64, out_channels=128, kernel_size=31, stride=1, padding="same"),
             nn.BatchNorm1d(128),
             nn.PReLU(),
-            nn.Conv1d(in_channels=128, out_channels=256, kernel_size=31, stride=1, padding="same"),
-            nn.PReLU()
         )
         
         self.decoder = nn.Sequential(
-            nn.Conv1d(in_channels=256, out_channels=128, kernel_size=31, stride=1, padding="same"),
-            nn.BatchNorm1d(128),
-            nn.PReLU(),
             nn.Conv1d(in_channels=128, out_channels=64, kernel_size=31, stride=1, padding="same"),
             nn.BatchNorm1d(64),
             nn.PReLU(),
