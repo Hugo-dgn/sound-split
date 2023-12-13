@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 try:
     import sounddevice as sd
     SOUND = True
-except ModuleNotFoundError as e:
+except OSError as e:
     print("Warning: sounddevice module not found. You won't be able to listen to the audio.")
     print(e)
     SOUND = False
