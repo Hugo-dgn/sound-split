@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import Dataset
 
 class SoundDataset(Dataset):
-    def __init__(self, dir, length, train=True, ratio=0.8, reduce=0, partition=1):
+    def __init__(self, dir, length, train=True, ratio=0.9, reduce=0, partition=1):
         self.dir = dir
         self.length = length
         self.partition = partition
@@ -34,7 +34,6 @@ class SoundDataset(Dataset):
         
         self.data = [self.data[k*step:(k+1)*step] for k in range(partition)]
         self.partition_length = (step-1)*step
-        pass
 
     def __getitem__(self, id):
         partition = id // self.partition_length

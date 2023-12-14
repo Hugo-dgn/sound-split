@@ -14,7 +14,7 @@ except OSError as e:
     SOUND = False
 
 import loader
-from models import get_network
+from models import get_network, SoundLoss
 
 def listen(args):
     if not SOUND:
@@ -35,18 +35,41 @@ def listen(args):
 def train(args):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"train on {device}")
-    Network = get_network(1)
-    model = Network(1)
+    Network = get_network(args.network)
+    model = Network()
     model = model.to(device)
+    
     dataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition)
     traindataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True)
-    testdataset = loader.SoundDataset(DATASET_PATH, length=args.length, train=False, reduce=args.reduce)
     
+    testdataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition, train=False)
+    testdatasetloader = DataLoader(testdataset, batch_size=args.batch, shuffle=True)
+    
+    criterion = SoundLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    model.train()
     for epoch in range(args.epochs):
+        print(f"Epoch {epoch+1}/{args.epochs}")
         for audio, target in tqdm(traindataloader):
             audio = audio.to(device)
             target = target.to(device)
             x1, x2 = model(audio)
+            
+            optimizer.zero_grad()
+            loss = criterion(x1, x2, target)
+            loss.backward()
+            optimizer.step()
+        
+        print("Testing")
+        loss = 0
+        for audio, target in tqdm(testdatasetloader):
+            audio = audio.to(device)
+            target = target.to(device)
+            x1, x2 = model(audio)
+            loss += criterion(x1, x2, target).cpu().item()
+        print(f"Accuracy: {1/(1+loss/len(testdataset))}")
+        
+        model.save()
 
 def info(args):
     Network = get_network(1)
@@ -54,6 +77,27 @@ def info(args):
     
     torchinfo.summary(model, (1, args.length))
     
+def compute(args):
+    if not SOUND:
+        message = "Sounddevice module not found. You won't be able to listen to the audio."
+        raise AssertionError(message)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(f"Compute on {device}")
+    Network = get_network(args.network)
+    model = Network()
+    model = model.to(device)
+    model.eval()
+    
+    dataset = loader.SoundDataset(DATASET_PATH, length=args.length)
+    audio, target = dataset.__getitem__(args.id)
+    
+    audio = audio.to(device)
+    x1, x2 = model(audio)
+    x1 = x1.cpu().numpy()
+    x2 = x2.cpu().numpy()
+        
+    sd.play(x1, SAMPLE_RATE, blocking=True)
+    sd.play(x2, SAMPLE_RATE, blocking=True)
     
 
 def main():
@@ -82,6 +126,10 @@ def main():
         "--reduce", help="reduce the dataset size by this percent", type=float, default=0)
     train_parser.add_argument(
         "--partition", help="number of partitions", type=int, default=1)
+    train_parser.add_argument(
+        "--network", help="network topology", type=int, default=1)
+    train_parser.add_argument(
+        "--lr", help="learning rate", type=float, default=0.001)
     train_parser.set_defaults(func=train)
     
     info_parser = subparsers.add_parser(
