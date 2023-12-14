@@ -78,9 +78,6 @@ def info(args):
     torchinfo.summary(model, (1, args.length))
     
 def compute(args):
-    if not SOUND:
-        message = "Sounddevice module not found. You won't be able to listen to the audio."
-        raise AssertionError(message)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Compute on {device}")
     Network = get_network(args.network)
@@ -91,13 +88,25 @@ def compute(args):
     dataset = loader.SoundDataset(DATASET_PATH, length=args.length)
     audio, target = dataset.__getitem__(args.id)
     
-    audio = audio.to(device)
+    audio = audio.to(device).reshape(1, -1)
     x1, x2 = model(audio)
-    x1 = x1.cpu().numpy()
-    x2 = x2.cpu().numpy()
+    
+    criterion = SoundLoss()
+    
+    loss = criterion(x1, x2, target.unsqueeze(0))
+    
+    print(f"Loss: {loss}")
+    print(f"Acuuracy: {1/(1+loss)}")
         
-    sd.play(x1, SAMPLE_RATE, blocking=True)
-    sd.play(x2, SAMPLE_RATE, blocking=True)
+    if not SOUND:
+        
+        message = "Sounddevice module not found. You won't be able to listen to the audio."
+        print(message)
+    else:
+        x1 = x1.detach().numpy()
+        x2 = x2.detach().numpy()
+        sd.play(x1, SAMPLE_RATE, blocking=True)
+        sd.play(x2, SAMPLE_RATE, blocking=True)
     
 
 def main():
@@ -137,6 +146,16 @@ def main():
     info_parser.add_argument(
         "--length", help="length of the audio signal", type=int, default=32000)
     info_parser.set_defaults(func=info)
+    
+    compute_parser = subparsers.add_parser(
+        "compute", help="Compute the output of the model")
+    compute_parser.add_argument(
+        "--length", help="length of the audio signal", type=int, default=32000)
+    compute_parser.add_argument(
+        "--network", help="network topology", type=int, default=1)
+    compute_parser.add_argument(
+        "--id", help="id of the audio", type=int, default=0)
+    compute_parser.set_defaults(func=compute)
     
     args = parser.parse_args()
 
