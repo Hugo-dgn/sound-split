@@ -5,6 +5,9 @@ import torch
 import torchinfo
 from torch.utils.data import DataLoader
 
+import matplotlib.pyplot as plt
+import numpy as np
+
 try:
     import sounddevice as sd
     SOUND = True
@@ -97,16 +100,52 @@ def compute(args):
     
     print(f"Loss: {loss}")
     print(f"Acuuracy: {1/(1+loss)}")
+    
+    x1 = x1.detach().numpy().squeeze()
+    x2 = x2.detach().numpy().squeeze()
+    
+    y1 = target[0].detach().numpy()
+    y2 = target[1].detach().numpy()
         
     if not SOUND:
         
         message = "Sounddevice module not found. You won't be able to listen to the audio."
         print(message)
     else:
-        x1 = x1.detach().numpy()
-        x2 = x2.detach().numpy()
-        sd.play(x1, SAMPLE_RATE, blocking=True)
-        sd.play(x2, SAMPLE_RATE, blocking=True)
+        
+        if args.audio == 1:
+            print("Playing audio 1")
+            sd.play(x1, SAMPLE_RATE, blocking=True)
+        
+        if args.audio == 2:
+            print("Playing audio 2")
+            sd.play(x2, SAMPLE_RATE, blocking=True)
+            
+    if args.plot:
+    
+        d1 = np.linalg.norm(x1-y1)
+        d2 = np.linalg.norm(x1-y2)
+        
+        if d1 < d2:
+            plt.figure("sound 1")
+            plt.plot(x1, label="x1")
+            plt.plot(y1, label="y1", alpha=0.5)
+            
+            plt.figure("sound 2")
+            plt.plot(x2, label="x2")
+            plt.plot(y2, label="y2", alpha=0.5)
+        else:
+            plt.figure("sound 1")
+            plt.plot(x1, label="x1")
+            plt.plot(y2, label="y1", alpha=0.5)
+            
+            plt.figure("sound 2")
+            plt.plot(x2, label="x2")
+            plt.plot(y1, label="y1", alpha=0.5)
+        
+        plt.legend()
+        
+        plt.show()
     
 
 def main():
@@ -155,6 +194,10 @@ def main():
         "--network", help="network topology", type=int, default=1)
     compute_parser.add_argument(
         "--id", help="id of the audio", type=int, default=0)
+    compute_parser.add_argument(
+        "--audio", help="Which audio to play : 0 for combined audio, 1 and 2 for individual audio", type=int, choices=[0, 1, 2], default=0)
+    compute_parser.add_argument(
+        "--plot", help="plot the audio", action="store_true")
     compute_parser.set_defaults(func=compute)
     
     args = parser.parse_args()

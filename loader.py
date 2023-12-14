@@ -26,8 +26,7 @@ class SoundDataset(Dataset):
                 self.data = random.sample(self.data, n_target)
         else:
             self.data = self.data[n_target:]
-            
-        random.shuffle(self.data)
+        
         step = len(self.data)//partition
         self.data = self.data[:step*partition]
         self.number_audio = len(self.data)
