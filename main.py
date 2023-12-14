@@ -36,7 +36,7 @@ def train(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     Network = get_network(1)
     model = Network(1)
-    model.to(device)
+    model = model.to(device)
     dataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition)
     traindataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True)
     testdataset = loader.SoundDataset(DATASET_PATH, length=args.length, train=False, reduce=args.reduce)
