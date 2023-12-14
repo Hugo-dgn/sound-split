@@ -33,7 +33,8 @@ def listen(args):
     sd.play(audio_np, SAMPLE_RATE, blocking=True)
 
 def train(args):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(f"train on {device}")
     Network = get_network(1)
     model = Network(1)
     model = model.to(device)

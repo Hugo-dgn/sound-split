@@ -7,3 +7,5 @@ venv
 dataset
 __pycache__
 save/
+job.batch
+out.out
