@@ -2,6 +2,7 @@ import argparse
 from tqdm.auto import tqdm
 
 import torch
+import torchinfo
 from torch.utils.data import DataLoader
 
 try:
@@ -46,6 +47,14 @@ def train(args):
             target = target.to(device)
             x1, x2 = model(audio)
 
+def info(args):
+    Network = get_network(1)
+    model = Network(1)
+    
+    torchinfo.summary(model, (1, args.length))
+    
+    
+
 def main():
     parser = argparse.ArgumentParser(description="Sound split")
 
@@ -73,6 +82,12 @@ def main():
     train_parser.add_argument(
         "--partition", help="number of partitions", type=int, default=1)
     train_parser.set_defaults(func=train)
+    
+    info_parser = subparsers.add_parser(
+        "info", help="Display model information")
+    info_parser.add_argument(
+        "--length", help="length of the audio signal", type=int, default=32000)
+    info_parser.set_defaults(func=info)
     
     args = parser.parse_args()
 

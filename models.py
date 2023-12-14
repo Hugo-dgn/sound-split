@@ -33,25 +33,25 @@ class Network1(nn.Module):
         super(Network1, self).__init__()
         
         self.encoder = nn.Sequential(
-            nn.Conv1d(in_channels=1, out_channels=32, kernel_size=31, stride=1, padding="same"),
+            nn.Conv1d(in_channels=1, out_channels=8, kernel_size=31, stride=1, padding="same"),
+            nn.BatchNorm1d(8),
+            nn.PReLU(),
+            nn.Conv1d(in_channels=8, out_channels=16, kernel_size=31, stride=1, padding="same"),
+            nn.BatchNorm1d(16),
+            nn.PReLU(),
+            nn.Conv1d(in_channels=16, out_channels=32, kernel_size=31, stride=1, padding="same"),
             nn.BatchNorm1d(32),
-            nn.PReLU(),
-            nn.Conv1d(in_channels=32, out_channels=64, kernel_size=31, stride=1, padding="same"),
-            nn.BatchNorm1d(64),
-            nn.PReLU(),
-            nn.Conv1d(in_channels=64, out_channels=128, kernel_size=31, stride=1, padding="same"),
-            nn.BatchNorm1d(128),
             nn.PReLU(),
         )
         
         self.decoder = nn.Sequential(
-            nn.Conv1d(in_channels=128, out_channels=64, kernel_size=31, stride=1, padding="same"),
-            nn.BatchNorm1d(64),
-            nn.PReLU(),
-            nn.Conv1d(in_channels=64, out_channels=32, kernel_size=31, stride=1, padding="same"),
+            nn.Conv1d(in_channels=32, out_channels=32, kernel_size=31, stride=1, padding="same"),
             nn.BatchNorm1d(32),
             nn.PReLU(),
-            nn.Conv1d(in_channels=32, out_channels=1, kernel_size=31, stride=1, padding="same"),
+            nn.Conv1d(in_channels=32, out_channels=16, kernel_size=31, stride=1, padding="same"),
+            nn.BatchNorm1d(16),
+            nn.PReLU(),
+            nn.Conv1d(in_channels=16, out_channels=1, kernel_size=31, stride=1, padding="same"),
         )
         
         checkpoint = check(checkpoints_id)
