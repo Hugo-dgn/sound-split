@@ -11,3 +11,5 @@ job.batch
 out.out
 wandb/
 dgx.bash
+out.out1
+out.out2

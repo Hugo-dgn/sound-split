@@ -3,8 +3,6 @@ import os
 import torch
 import torch.nn as nn
 
-import datetime
-
 def get_checkpoint(network_id, gen, checkpoint):
     network_path = os.path.join("save", str(network_id))
     if gen == -1:

@@ -66,6 +66,8 @@ def train(args):
         }
         )
     
+    print(f"training Network{model.network_id}-Gen{model.gen}")
+    
     for epoch in range(args.epochs):
         print(f"Epoch {epoch+1}/{args.epochs}")
         for audio, target in tqdm(traindataloader):
@@ -85,16 +87,18 @@ def train(args):
         scheduler.step()
         
         print("Testing")
-        loss = 0
+        test_loss = 0
         for audio, target in tqdm(testdatasetloader):
             audio = audio.to(device)
             target = target.to(device)
             x1, x2 = model(audio)
-            loss += criterion(x1, x2, target).cpu().item()
+            test_loss += criterion(x1, x2, target).cpu().item()
             
             del audio, target, x1, x2
             torch.cuda.empty_cache()
-        print(f"Accuracy: {1/(1+loss/len(testdataset))}")
+        
+        if args.log:
+            wandb.log({"test_loss": test_loss.detach().cpu().item()})
         
         model.save()
     
