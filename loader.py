@@ -5,6 +5,15 @@ import soundfile as sf
 import torch
 from torch.utils.data import Dataset
 
+def get_relevent(audio, length):
+    odd_length = length + 1 - length % 2
+    with torch.no_grad():
+        window = torch.ones(odd_length)
+        #convolve audio with window
+        indices = torch.conv1d(torch.abs(audio.unsqueeze(0).unsqueeze(0))**2, window.unsqueeze(0).unsqueeze(0)).squeeze()
+        index = torch.argmax(indices)
+    return audio[index:index+length]
+
 class SoundDataset(Dataset):
     def __init__(self, dir, length, train=True, ratio=0.9, reduce=0, partition=1):
         self.dir = dir
@@ -54,14 +63,16 @@ class SoundDataset(Dataset):
         audio2 = audio2.type(torch.float32)
         
         if audio1.shape[0] < self.length:
-            audio1 = torch.cat([audio1, torch.zeros(self.length - audio1.shape[0])])
-        else:
-            audio1 = audio1[:self.length]
+            delta = self.length - audio1.shape[0]
+            audio1 = torch.nn.functional.pad(audio1, (0, delta))
+        elif audio1.shape[0] > self.length:
+            audio1 = get_relevent(audio1, self.length)
         
         if audio2.shape[0] < self.length:
-            audio2 = torch.cat([audio2, torch.zeros(self.length - audio2.shape[0])])
-        else:
-            audio2 = audio2[:self.length]
+            delta = self.length - audio2.shape[0]
+            audio2 = torch.nn.functional.pad(audio2, (0, delta))
+        elif audio2.shape[0] > self.length:
+            audio2 = get_relevent(audio2, self.length)
         
         audio = audio1 + audio2
         target = torch.stack([audio1, audio2], dim=0)
