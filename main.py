@@ -103,7 +103,7 @@ def train(args):
 
 def info(args):
     Network = get_network(args.network)
-    model = Network()
+    model = Network(args.gen, args.checkpoint)
     
     torchinfo.summary(model, (1, args.length))
     
@@ -111,8 +111,7 @@ def compute(args):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Compute on {device}")
     Network = get_network(args.network)
-    model = Network()
-    model = model.to(device)
+    model = Network(args.gen, args.checkpoint)
     model.eval()
     
     dataset = loader.SoundDataset(DATASET_PATH, length=args.length, device=device)
@@ -239,6 +238,10 @@ def main():
         "--length", help="length of the audio signal", type=int, default=32000)
     info_parser.add_argument(
         "--network", help="network topology", type=int, default=1)
+    info_parser.add_argument(
+        "--gen", help="network generation", type=int, default=-1)
+    info_parser.add_argument(
+        "--checkpoint", help="checkpoint number", type=int, default=-1)
     info_parser.set_defaults(func=info)
     
     compute_parser = subparsers.add_parser(
@@ -253,6 +256,10 @@ def main():
         "--audio", help="Which audio to play : 0 for combined audio, 1 and 2 for individual audio", type=int, choices=[0, 1, 2], default=0)
     compute_parser.add_argument(
         "--plot", help="plot the audio", action="store_true")
+    compute_parser.add_argument(
+        "--gen", help="network generation", type=int, default=-1)
+    compute_parser.add_argument(
+        "--checkpoint", help="checkpoint number", type=int, default=-1)
     compute_parser.set_defaults(func=compute)
     
     args = parser.parse_args()
