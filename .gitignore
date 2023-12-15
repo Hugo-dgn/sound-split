@@ -10,3 +10,4 @@ save/
 job.batch
 out.out
 wandb/
+dgx.bash
