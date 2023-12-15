@@ -64,6 +64,9 @@ class SoundLoss(nn.Module):
         arrange1 = x1 - target[:,0,:]
         arrange2 = x1 - target[:,1,:]
         
+        arrange1 = arrange1 / torch.max(torch.abs(arrange1), dim=1)[0].unsqueeze(1)
+        arrange2 = arrange2 / torch.max(torch.abs(arrange2), dim=1)[0].unsqueeze(1)
+        
         arrangement = torch.stack([arrange1, arrange2], dim=1)**2
         arrangement = torch.mean(arrangement, dim=2)
         value, index = torch.min(arrangement, dim=1)
@@ -71,6 +74,9 @@ class SoundLoss(nn.Module):
         
         arrange1 = x2 - target[:,0,:]
         arrange2 = x2 - target[:,1,:]
+        
+        arrange1 = arrange1 / torch.max(torch.abs(arrange1), dim=1)[0].unsqueeze(1)
+        arrange2 = arrange2 / torch.max(torch.abs(arrange2), dim=1)[0].unsqueeze(1)
         
         arrangement = torch.stack([arrange1, arrange2], dim=1)**2
         arrangement = torch.mean(arrangement, dim=2)

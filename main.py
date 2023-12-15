@@ -55,16 +55,18 @@ def train(args):
     model.train()
     
     
-    wandb.init(
-    # set the wandb project where this run will be logged
-    project="SoundSplit",
-    
-    # track hyperparameters and run metadata
-    config={
-    "learning_rate": args.lr,
-    "architecture": f"Network{args.network}",
-    }
-    )
+    if args.log:
+        wandb.init(
+        # set the wandb project where this run will be logged
+        project="SoundSplit",
+        name=f"Network{args.network}",
+        resume="allow",
+        # track hyperparameters and run metadata
+        config={
+        "learning_rate": args.lr,
+        "architecture": f"Network{args.network}",
+        }
+        )
     
     for epoch in range(args.epochs):
         print(f"Epoch {epoch+1}/{args.epochs}")
@@ -78,7 +80,8 @@ def train(args):
             loss.backward()
             optimizer.step()
             
-            wandb.log({"loss": loss.detach().cpu().item()})
+            if args.log:
+                wandb.log({"loss": loss.detach().cpu().item()})
         
         print("Testing")
         loss = 0
@@ -91,7 +94,8 @@ def train(args):
         
         model.save()
     
-    wandb.finish()
+    if args.log:
+        wandb.finish()
 
 def info(args):
     Network = get_network(args.network)
@@ -197,6 +201,8 @@ def main():
         "--network", help="network topology", type=int, default=1)
     train_parser.add_argument(
         "--lr", help="learning rate", type=float, default=0.001)
+    train_parser.add_argument(
+        "--log", help="log the training to wandb", action="store_true")
     train_parser.set_defaults(func=train)
     
     info_parser = subparsers.add_parser(
