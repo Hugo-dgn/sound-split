@@ -8,6 +8,8 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import numpy as np
 
+import wandb
+
 try:
     import sounddevice as sd
     SOUND = True
@@ -51,6 +53,19 @@ def train(args):
     criterion = SoundLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     model.train()
+    
+    
+    wandb.init(
+    # set the wandb project where this run will be logged
+    project="SoundSplit",
+    
+    # track hyperparameters and run metadata
+    config={
+    "learning_rate": args.lr,
+    "architecture": f"Network{args.network}",
+    }
+    )
+    
     for epoch in range(args.epochs):
         print(f"Epoch {epoch+1}/{args.epochs}")
         for audio, target in tqdm(traindataloader):
@@ -62,6 +77,8 @@ def train(args):
             loss = criterion(x1, x2, target)
             loss.backward()
             optimizer.step()
+            
+            wandb.log({"loss": loss.detach().cpu().item()})
         
         print("Testing")
         loss = 0
@@ -73,10 +90,12 @@ def train(args):
         print(f"Accuracy: {1/(1+loss/len(testdataset))}")
         
         model.save()
+    
+    wandb.finish()
 
 def info(args):
-    Network = get_network(1)
-    model = Network(1)
+    Network = get_network(args.network)
+    model = Network()
     
     torchinfo.summary(model, (1, args.length))
     
@@ -184,6 +203,8 @@ def main():
         "info", help="Display model information")
     info_parser.add_argument(
         "--length", help="length of the audio signal", type=int, default=32000)
+    info_parser.add_argument(
+        "--network", help="network topology", type=int, default=1)
     info_parser.set_defaults(func=info)
     
     compute_parser = subparsers.add_parser(
