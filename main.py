@@ -137,6 +137,9 @@ def compute(args):
     
     y1 = target[0].detach().numpy()
     y2 = target[1].detach().numpy()
+    
+    l1 = np.mean((x1-y1)**2) + np.mean((x2-y2)**2)
+    l2 = np.mean((x1-y2)**2) + np.mean((x2-y1)**2)
         
     if not SOUND:
         
@@ -145,17 +148,24 @@ def compute(args):
     else:
         
         if args.audio == 1:
-            print("Playing audio 1")
+            print("Playing predicted audio 1")
             sd.play(x1, SAMPLE_RATE, blocking=True)
+            print("Playing audio 1")
+            if l1 < l2:
+                sd.play(y1, SAMPLE_RATE, blocking=True)
+            else:
+                sd.play(y2, SAMPLE_RATE, blocking=True)
         
         if args.audio == 2:
             print("Playing audio 2")
             sd.play(x2, SAMPLE_RATE, blocking=True)
+            print("Playing audio 2")
+            if l1 > l2:
+                sd.play(y1, SAMPLE_RATE, blocking=True)
+            else:
+                sd.play(y2, SAMPLE_RATE, blocking=True)
             
     if args.plot:
-        
-        l1 = np.mean((x1-y1)**2) + np.mean((x2-y2)**2)
-        l2 = np.mean((x1-y2)**2) + np.mean((x2-y1)**2)
         
         if l1 < l2:
             plt.figure("sound 1")
