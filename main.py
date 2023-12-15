@@ -44,10 +44,10 @@ def train(args):
     model = Network()
     model = model.to(device)
     
-    dataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition)
+    dataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition, device=device)
     traindataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True)
     
-    testdataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition, train=False)
+    testdataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition, device=device, train=False)
     testdatasetloader = DataLoader(testdataset, batch_size=args.batch, shuffle=True)
     
     criterion = SoundLoss()
@@ -72,8 +72,6 @@ def train(args):
     for epoch in range(args.epochs):
         print(f"Epoch {epoch+1}/{args.epochs}")
         for audio, target in tqdm(traindataloader):
-            audio = audio.to(device)
-            target = target.to(device)
             x1, x2 = model(audio)
             
             optimizer.zero_grad()
@@ -83,6 +81,9 @@ def train(args):
             
             if args.log:
                 wandb.log({"loss": loss.detach().cpu().item()})
+                
+            del audio, target, x1, x2, loss
+            torch.cuda.empty_cache()
         
         print("Testing")
         loss = 0
@@ -91,6 +92,9 @@ def train(args):
             target = target.to(device)
             x1, x2 = model(audio)
             loss += criterion(x1, x2, target).cpu().item()
+            
+            del audio, target, x1, x2
+            torch.cuda.empty_cache()
         print(f"Accuracy: {1/(1+loss/len(testdataset))}")
         
         model.save()
@@ -112,7 +116,7 @@ def compute(args):
     model = model.to(device)
     model.eval()
     
-    dataset = loader.SoundDataset(DATASET_PATH, length=args.length)
+    dataset = loader.SoundDataset(DATASET_PATH, length=args.length, device=device)
     audio, target = dataset.__getitem__(args.id)
     
     audio = audio.to(device).reshape(1, -1)
