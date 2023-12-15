@@ -1,12 +1,0 @@
-wandb: Currently logged in as: hugo-degeneve. Use `wandb login --relogin` to force relogin
-wandb: Tracking run with wandb version 0.16.1
-wandb: Run data is saved locally in /raid/home/hougo/working_directory/sound-split/wandb/run-20231215_214647-Loss-Network2-Gen0
-wandb: Run `wandb offline` to turn off syncing.
-wandb: Resuming run Network2-Gen0
-wandb: ⭐️ View project at https://wandb.ai/hugo-degeneve/SoundSplit
-wandb: 🚀 View run at https://wandb.ai/hugo-degeneve/SoundSplit/runs/Loss-Network2-Gen0
-Warning: sounddevice module not found. You won't be able to listen to the audio.
-PortAudio library not found
-train on cuda:0
-Epoch 1/1
-  0%|          | 0/68 [00:00<?, ?it/s]  1%|▏         | 1/68 [00:10<11:23, 10.21s/it]  3%|▎         | 2/68 [00:17<09:16,  8.42s/it]  4%|▍         | 3/68 [00:24<08:19,  7.69s/it]  6%|▌         | 4/68 [00:31<07:49,  7.34s/it]  7%|▋         | 5/68 [00:37<07:24,  7.06s/it]  9%|▉         | 6/68 [00:44<07:04,  6.85s/it] 10%|█         | 7/68 [00:50<06:52,  6.76s/it] 12%|█▏        | 8/68 [00:57<06:42,  6.72s/it] 13%|█▎        | 9/68 [01:03<06:34,  6.68s/it] 15%|█▍        | 10/68 [01:10<06:25,  6.65s/it] 16%|█▌        | 11/68 [01:16<06:09,  6.48s/it] 18%|█▊        | 12/68 [01:22<05:49,  6.24s/it] 19%|█▉        | 13/68 [01:28<05:38,  6.15s/it] 21%|██        | 14/68 [01:34<05:31,  6.13s/it] 22%|██▏       | 15/68 [01:40<05:22,  6.08s/it] 24%|██▎       | 16/68 [01:46<05:13,  6.03s/it] 25%|██▌       | 17/68 [01:51<05:04,  5.97s/it] 26%|██▋       | 18/68 [01:58<05:02,  6.05s/it] 28%|██▊       | 19/68 [02:04<04:57,  6.08s/it] 29%|██▉       | 20/68 [02:10<04:50,  6.06s/it] 31%|███       | 21/68 [02:16<04:41,  5.98s/it] 32%|███▏      | 22/68 [02:22<04:36,  6.00s/it] 34%|███▍      | 23/68 [02:28<04:29,  5.99s/it] 35%|███▌      | 24/68 [02:34<04:26,  6.06s/it] 37%|███▋      | 25/68 [02:40<04:19,  6.02s/it] 38%|███▊      | 26/68 [02:46<04:17,  6.12s/it] 40%|███▉      | 27/68 [02:52<04:08,  6.06s/it] 41%|████      | 28/68 [02:58<04:00,  6.02s/it]
