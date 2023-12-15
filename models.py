@@ -61,28 +61,19 @@ class SoundLoss(nn.Module):
     
     def forward(self, x1, x2, target):
         
-        arrange1 = x1 - target[:,0,:]
-        arrange2 = x1 - target[:,1,:]
+        arrange11 = x1 - target[:,0,:]
+        arrange12 = x1 - target[:,1,:]
         
-        normalized_arrange1 = arrange1 / torch.max(torch.abs(arrange1), dim=1)[0].unsqueeze(1)
-        normalized_arrange2 = arrange2 / torch.max(torch.abs(arrange2), dim=1)[0].unsqueeze(1)
-        normalized_arrange = torch.stack([normalized_arrange1, normalized_arrange2], dim=1)**2
-        normalized_arrange = torch.mean(normalized_arrange, dim=2)
-        index = torch.min(normalized_arrange, dim=1)[1]
+        arrange21 = x2 - target[:,0,:]
+        arrange22 = x2 - target[:,1,:]
         
-        arrangement = torch.stack([arrange1, arrange2], dim=1)**2
-        arrangement = torch.mean(arrangement, dim=2)
-        value = arrangement.gather(1, index.unsqueeze(1)).squeeze(1)
-        loss1 = value.mean()
+        loss1 = torch.mean(arrange11**2, dim=1) + torch.mean(arrange22**2, dim=1)
+        loss2 = torch.mean(arrange12**2, dim=1) + torch.mean(arrange21**2, dim=1)
         
-        arrange1 = x2 - target[:,0,:]
-        arrange2 = x2 - target[:,1,:]
-        
-        arrangement = torch.stack([arrange1, arrange2], dim=1)**2
-        arrangement = torch.mean(arrangement, dim=2)
-        value = arrangement.gather(1, (1-index).unsqueeze(1)).squeeze(1)
-        loss2 = value.mean()
-        return loss1 + loss2
+        loss = torch.stack([loss1, loss2], dim=1)
+        loss = torch.min(loss, dim=1).values        
+        loss = torch.mean(loss)
+        return loss
         
 
 class Network1(Network):
