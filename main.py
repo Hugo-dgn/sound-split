@@ -60,6 +60,7 @@ def train(args):
         # set the wandb project where this run will be logged
         project="SoundSplit",
         name=f"Network{args.network}",
+        id=f"LossNetwork",
         resume="allow",
         # track hyperparameters and run metadata
         config={
