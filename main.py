@@ -152,22 +152,40 @@ def compute(args):
         
         if d1 < d2:
             plt.figure("sound 1")
+            plt.subplot(211)
             plt.plot(x1, label="x1")
             plt.plot(y1, label="y1", alpha=0.5)
+            plt.legend()
+            plt.subplot(212)
+            plt.plot(np.abs(x1-y1), label="|x1-y1|")
+            plt.legend()
             
             plt.figure("sound 2")
+            plt.subplot(211)
             plt.plot(x2, label="x2")
             plt.plot(y2, label="y2", alpha=0.5)
+            plt.legend()
+            plt.subplot(212)
+            plt.plot(np.abs(x2-y2), label="|x2-y2|")
+            plt.legend()
         else:
             plt.figure("sound 1")
+            plt.subplot(211)
             plt.plot(x1, label="x1")
             plt.plot(y2, label="y1", alpha=0.5)
+            plt.legend()
+            plt.subplot(212)
+            plt.plot(np.abs(x1-y2), label="|x1-y1|")
+            plt.legend()
             
             plt.figure("sound 2")
+            plt.subplot(211)
             plt.plot(x2, label="x2")
             plt.plot(y1, label="y1", alpha=0.5)
-        
-        plt.legend()
+            plt.legend()
+            plt.subplot(212)
+            plt.plot(np.abs(x2-y1), label="|x2-y2|")
+            plt.legend()
         
         plt.show()
     
