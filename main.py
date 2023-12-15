@@ -146,8 +146,8 @@ def compute(args):
             
     if args.plot:
     
-        d1 = np.linalg.norm(x1-y1)
-        d2 = np.linalg.norm(x1-y2)
+        d1 = np.linalg.norm((x1-y1)/np.max(x1-y1))
+        d2 = np.linalg.norm((x1-y2)/np.max(x1-y2))
         
         if d1 < d2:
             plt.figure("sound 1")
