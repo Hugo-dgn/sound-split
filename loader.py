@@ -7,11 +7,12 @@ from torch.utils.data import Dataset
 
 def get_relevent(audio, length):
     odd_length = length + 1 - length % 2
+    audio_length = audio.shape[0]
     with torch.no_grad():
+        stride = audio_length // odd_length * 3
         window = torch.ones(odd_length)
-        #convolve audio with window
-        indices = torch.conv1d(torch.abs(audio.unsqueeze(0).unsqueeze(0))**2, window.unsqueeze(0).unsqueeze(0)).squeeze()
-        index = torch.argmax(indices)
+        indices = torch.conv1d(torch.abs(audio.unsqueeze(0).unsqueeze(0))**2, window.unsqueeze(0).unsqueeze(0), stride=stride).squeeze()
+        index = stride*torch.argmax(indices)
     return audio[index:index+length]
 
 class SoundDataset(Dataset):
