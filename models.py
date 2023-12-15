@@ -3,27 +3,43 @@ import os
 import torch
 import torch.nn as nn
 
-def get_last_checkpoint(checkpoints_id):
-    save_files = [int(file.split(".")[0]) for file in os.listdir(os.path.join("save", str(checkpoints_id)))]
-    if len(save_files) == 0:
-        last_checkpoint = 0
-    else:
-        last_checkpoint = max(save_files)
-    return last_checkpoint
+import datetime
 
-def check(checkpoints_id):
-    checkpoint = None
-    last_checkpoint = None
+def get_checkpoint(network_id, gen, checkpoint):
+    network_path = os.path.join("save", str(network_id))
+    if gen == -1:
+        gen = max([int(gen) for gen in os.listdir(network_path)])
+    path = os.path.join(network_path, str(gen))
+    save_files = [int(file.split(".")[0]) for file in os.listdir(path)]
+    if len(save_files) == 0:
+        start_checkpoint = None
+    else:
+        if checkpoint == -1:
+            start_checkpoint = max(save_files)
+        else:
+            if checkpoint in save_files:
+                start_checkpoint = checkpoint
+            else:
+                message = f"Checkpoint {checkpoint} not found."
+                raise AssertionError(message)
+    return start_checkpoint
+
+def check(network_id, gen):
+    path_network = os.path.join("save", str(network_id))
     if "save" not in os.listdir():
         os.mkdir("save")
-    if str(checkpoints_id) not in os.listdir("save"):
-        os.mkdir(os.path.join("save", str(checkpoints_id)))
-    elif len(os.listdir(os.path.join("save", str(checkpoints_id)))) > 0:
-        last_checkpoint = get_last_checkpoint(checkpoints_id)
-        checkpoint_path = os.path.join("save", str(checkpoints_id), str(last_checkpoint) + ".pth")
-        checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+    if str(network_id) not in os.listdir("save"):
+        os.mkdir(path_network)
+        
+    if gen == -1:
+        if len(os.listdir(path_network)) == 0:
+            gen = 0
+        else:
+            gen = max([int(gen) for gen in os.listdir(path_network)])
+    if str(gen) not in os.listdir(path_network):
+        os.mkdir(os.path.join(path_network, str(gen)))
     
-    return checkpoint, last_checkpoint
+    return gen
 
 def get_network(n):
     if f"Network{n}" in globals():
@@ -36,22 +52,30 @@ def get_network(n):
 
 class Network(nn.Module):
     
-    def __init__(self, checkpoints_id):
+    def __init__(self, network_id, gen, checkpoint):
         nn.Module.__init__(self)
-        self.checkpoints_id = checkpoints_id
+        self.network_id = network_id
+        self.gen = gen
+        self.checkpoint = checkpoint
     
     def save(self):
-        checkpoint = get_last_checkpoint(self.checkpoints_id) + 1
-        checkpoint_path = os.path.join("save", str(self.checkpoints_id))
-        torch.save({
-            'model_state_dict': self.state_dict(),
-        }, os.path.join(checkpoint_path, str(checkpoint) + ".pth"))
+        checkpoint = get_checkpoint(self.network_id, self.gen, -1)
+        if checkpoint is None:
+            checkpoint = 0
+        else:
+            checkpoint += 1
+        path_checkpoint = os.path.join("save", str(self.network_id), str(self.gen), str(checkpoint) + ".pth")
+        torch.save(
+            self.state_dict(), 
+            path_checkpoint)
     
     def load(self):
-        checkpoint, last_checkpoint = check(self.checkpoints_id)
-        if checkpoint is not None:
-            print(f"Loading checkpoint {last_checkpoint}")
-            self.load_state_dict(checkpoint['model_state_dict'])
+        self.gen = check(self.network_id, self.gen)
+        start_checkpoint = get_checkpoint(self.network_id, self.gen, self.checkpoint)
+        if start_checkpoint is not None:
+            path_start_checkpoint = os.path.join("save", str(self.network_id), str(self.gen), str(start_checkpoint) + ".pth")
+            checkpoint = torch.load(path_start_checkpoint)
+            self.load_state_dict(checkpoint)
 
 ####################################################################################################
 
@@ -77,8 +101,8 @@ class SoundLoss(nn.Module):
         
 
 class Network1(Network):
-    def __init__(self):
-        Network.__init__(self, 1)
+    def __init__(self, gen, checkpoint):
+        Network.__init__(self, 1, gen, checkpoint)
         
         self.encoder = nn.Sequential(
             nn.Conv1d(in_channels=1, out_channels=8, kernel_size=31, stride=1, padding="same"),
@@ -118,13 +142,12 @@ class conv_block(nn.Module):
     def __init__(self, in_c, out_c, kernel_size):
         super().__init__()
         self.network = nn.Sequential(
-            nn.Dropout(0.2),
             nn.Conv1d(in_c, out_c, kernel_size=kernel_size, padding="same"),
             nn.BatchNorm1d(out_c),
-            nn.ReLU(),
+            nn.Mish(),
             nn.Conv1d(out_c, out_c, kernel_size=kernel_size, padding="same"),
             nn.BatchNorm1d(out_c),
-            nn.ReLU()
+            nn.Mish()
         )
     def forward(self, x):
         y = self.network(x)
@@ -138,7 +161,7 @@ class encoder_block(nn.Module):
     def forward(self, x):
         y = self.conv(x)
         p = self.pool(y)
-        return x, p
+        return y, p
 
 class decoder_block(nn.Module):
     def __init__(self, in_c, out_c, in_skip, kernel_size):
@@ -159,19 +182,21 @@ class decoder_block(nn.Module):
         x = self.conv(x)
         return x
 
+####################################################################################################
+
 class Network2(Network):
-    def __init__(self):
-        Network.__init__(self, 2)
+    def __init__(self, gen, checkpoint):
+        Network.__init__(self, 2, gen, checkpoint)
         
         self.e1 = encoder_block(1, 16, kernel_size=25)
         self.e2 = encoder_block(16, 32, kernel_size=13)
         self.e3 = encoder_block(32, 64, kernel_size=7)
         self.e4 = encoder_block(64, 64, kernel_size=5)
         self.b = conv_block(64, 128, kernel_size=3)
-        self.d1 = decoder_block(128, 64, 64, kernel_size=5)
-        self.d2 = decoder_block(64, 32, 32, kernel_size=7)
-        self.d3 = decoder_block(32, 16, 16, kernel_size=13)
-        self.d4 = decoder_block(16, 8, 1, kernel_size=15)
+        self.d1 = decoder_block(128, 64, 64, kernel_size=3)
+        self.d2 = decoder_block(64, 32, 64, kernel_size=3)
+        self.d3 = decoder_block(32, 16, 32, kernel_size=3)
+        self.d4 = decoder_block(16, 8, 16, kernel_size=3)
         self.outputs = nn.Conv1d(8, 1, kernel_size=1, padding=0)
         
         self.load()

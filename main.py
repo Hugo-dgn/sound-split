@@ -41,7 +41,7 @@ def train(args):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"train on {device}")
     Network = get_network(args.network)
-    model = Network()
+    model = Network(args.gen, args.checkpoint)
     model = model.to(device)
     
     dataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition, device=device)
@@ -52,20 +52,17 @@ def train(args):
     
     criterion = SoundLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=args.gamma)
     model.train()
-    
     
     if args.log:
         wandb.init(
-        # set the wandb project where this run will be logged
         project="SoundSplit",
-        name=f"Network{args.network}",
-        id=f"LossNetwork",
+        name=f"Network{model.network_id}-Gen{model.gen}",
+        id=f"Loss-Network{model.network_id}-Gen{model.gen}",
         resume="allow",
-        # track hyperparameters and run metadata
         config={
-        "learning_rate": args.lr,
-        "architecture": f"Network{args.network}",
+        "network": args.network,
         }
         )
     
@@ -84,6 +81,8 @@ def train(args):
                 
             del audio, target, x1, x2, loss
             torch.cuda.empty_cache()
+        
+        scheduler.step()
         
         print("Testing")
         loss = 0
@@ -223,7 +222,13 @@ def main():
     train_parser.add_argument(
         "--network", help="network topology", type=int, default=1)
     train_parser.add_argument(
+        "--gen", help="network generation", type=int, default=-1)
+    train_parser.add_argument(
+        "--checkpoint", help="checkpoint number", type=int, default=-1)
+    train_parser.add_argument(
         "--lr", help="learning rate", type=float, default=0.001)
+    train_parser.add_argument(
+        "--gamma", help="learning rate decay", type=float, default=0.9)
     train_parser.add_argument(
         "--log", help="log the training to wandb", action="store_true")
     train_parser.set_defaults(func=train)
