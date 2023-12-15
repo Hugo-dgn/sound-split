@@ -88,17 +88,18 @@ def train(args):
         
         print("Testing")
         test_loss = 0
-        for audio, target in tqdm(testdatasetloader):
-            audio = audio.to(device)
-            target = target.to(device)
-            x1, x2 = model(audio)
-            test_loss += criterion(x1, x2, target).cpu().item()
-            
-            del audio, target, x1, x2
-            torch.cuda.empty_cache()
+        with torch.no_grad():
+            for audio, target in tqdm(testdatasetloader):
+                audio = audio.to(device)
+                target = target.to(device)
+                x1, x2 = model(audio)
+                test_loss += criterion(x1, x2, target).cpu().item()
+                
+                del audio, target, x1, x2
+                torch.cuda.empty_cache()
         
         if args.log:
-            wandb.log({"test_loss": test_loss.detach().cpu().item()})
+            wandb.log({"test_loss": test_loss/len(testdatasetloader)})
         
         model.save()
     
