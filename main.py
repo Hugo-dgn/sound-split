@@ -119,6 +119,8 @@ def compute(args):
     model = Network(args.gen, args.checkpoint)
     model.eval()
     
+    print(f"Using Network{model.network_id}-Gen{model.gen} on checkpoint {model.checkpoint} and audio {args.id}")
+    
     dataset = loader.SoundDataset(DATASET_PATH, length=args.length, device=device)
     audio, target = dataset.__getitem__(args.id)
     

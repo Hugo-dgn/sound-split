@@ -70,6 +70,7 @@ class Network(nn.Module):
     def load(self):
         self.gen = check(self.network_id, self.gen)
         start_checkpoint = get_checkpoint(self.network_id, self.gen, self.checkpoint)
+        self.checkpoint = start_checkpoint
         if start_checkpoint is not None:
             path_start_checkpoint = os.path.join("save", str(self.network_id), str(self.gen), str(start_checkpoint) + ".pth")
             checkpoint = torch.load(path_start_checkpoint, map_location=torch.device('cpu'))
