@@ -84,9 +84,9 @@ class SoundLoss(nn.Module):
         nn.Module.__init__(self)
         self.sample_rate = sample_rate
         self.to_db = torchaudio.transforms.AmplitudeToDB().to(device)
-        self.MelSpectrogram = torchaudio.transforms.MelSpectrogram(sample_rate=self.sample_rate, n_fft=512, hop_length=256, n_mels=128).to(device)
+        self.MelSpectrogram = torchaudio.transforms.MelSpectrogram(sample_rate=self.sample_rate, n_fft=512, hop_length=256, n_mels=32).to(device)
         self.relu = nn.ReLU()
-        self.db_threshold = 10
+        self.db_threshold = 20
     
     def forward(self, x1, x2, target):
         
@@ -97,9 +97,9 @@ class SoundLoss(nn.Module):
         arrange22 = x2 - target[:,1,:]
         
         loss1 = torch.mean(arrange11**2, dim=1) + torch.mean(arrange22**2, dim=1)
-        loss1 += 1/self.db_threshold*(torch.mean(self.relu(self.to_db(arrange11) + self.db_threshold)**2, dim=1) + torch.mean(self.relu(self.to_db(arrange22) + self.db_threshold)**2, dim=1))
+        loss1 += 2/self.db_threshold*(torch.mean(self.relu(self.to_db(arrange11) + self.db_threshold)**2, dim=1) + torch.mean(self.relu(self.to_db(arrange22) + self.db_threshold)**2, dim=1))
         loss2 = torch.mean(arrange12**2, dim=1) + torch.mean(arrange21**2, dim=1)
-        loss2 += 1/self.db_threshold*(torch.mean(self.relu(self.to_db(arrange12) + self.db_threshold)**2, dim=1) + torch.mean(self.relu(self.to_db(arrange21) + self.db_threshold)**2, dim=1))
+        loss2 += 2/self.db_threshold*(torch.mean(self.relu(self.to_db(arrange12) + self.db_threshold)**2, dim=1) + torch.mean(self.relu(self.to_db(arrange21) + self.db_threshold)**2, dim=1))
         
         loss = torch.stack([loss1, loss2], dim=1)
         loss, indices = torch.min(loss, dim=1)        
@@ -108,7 +108,7 @@ class SoundLoss(nn.Module):
         loss1 = torch.mean(self.MelSpectrogram(arrange11).reshape(arrange11.shape[0], -1)**2, dim=1) + torch.mean(self.MelSpectrogram(arrange22).reshape(arrange22.shape[0], -1)**2, dim=1)
         loss2 = torch.mean(self.MelSpectrogram(arrange12).reshape(arrange12.shape[0], -1)**2, dim=1) + torch.mean(self.MelSpectrogram(arrange21).reshape(arrange21.shape[0], -1)**2, dim=1)
         
-        frequencydomainloss = 0.01*torch.mean(torch.stack([loss1, loss2], dim=1).gather(1, indices.unsqueeze(1)).squeeze(1))
+        frequencydomainloss = 0.0001*torch.mean(torch.stack([loss1, loss2], dim=1).gather(1, indices.unsqueeze(1)).squeeze(1))
         
         loss = timedomaineloss + frequencydomainloss
         
