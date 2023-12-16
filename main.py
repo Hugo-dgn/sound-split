@@ -170,7 +170,7 @@ def compute(args):
     audio = audio.to(device).reshape(1, -1)
     x1, x2 = model(audio)
     
-    criterion = SoundLoss()
+    criterion = SoundLoss(device, SAMPLE_RATE)
     
     loss = criterion(x1, x2, target.unsqueeze(0))
     
