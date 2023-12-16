@@ -1,6 +1,7 @@
 import os
 
 import torch
+import torchaudio
 import torch.nn as nn
 
 def get_checkpoint(network_id, gen, checkpoint):
@@ -81,6 +82,9 @@ class Network(nn.Module):
 class SoundLoss(nn.Module):
     def __init__(self):
         nn.Module.__init__(self)
+        self.to_db = torchaudio.transforms.AmplitudeToDB()
+        self.relu = nn.ReLU()
+        self.db_threshold = 10
     
     def forward(self, x1, x2, target):
         
@@ -91,7 +95,9 @@ class SoundLoss(nn.Module):
         arrange22 = x2 - target[:,1,:]
         
         loss1 = torch.mean(arrange11**2, dim=1) + torch.mean(arrange22**2, dim=1)
+        loss1 += 0.1*(torch.mean(self.relu(self.to_db(arrange11) + self.db_threshold)**2, dim=1) + torch.mean(self.relu(self.to_db(arrange22) + self.db_threshold)**2, dim=1))
         loss2 = torch.mean(arrange12**2, dim=1) + torch.mean(arrange21**2, dim=1)
+        loss2 += 0.1*(torch.mean(self.relu(self.to_db(arrange12) + self.db_threshold)**2, dim=1) + torch.mean(self.relu(self.to_db(arrange21) + self.db_threshold)**2, dim=1))
         
         loss = torch.stack([loss1, loss2], dim=1)
         loss = torch.min(loss, dim=1).values        

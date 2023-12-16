@@ -42,22 +42,41 @@ def spectrogram(args):
     dataset = loader.SoundDataset(DATASET_PATH, length=args.length)
     audio, target = dataset.__getitem__(args.id)
     
-    transform = torchaudio.transforms.Spectrogram(n_fft=1024, hop_length=512)
+    meltransform = torchaudio.transforms.MelSpectrogram(sample_rate=SAMPLE_RATE, n_fft=1024, hop_length=512, n_mels=128)
     
-    spectro = transform(audio)
-    spectro1 = transform(target[0])
-    spectro2 = transform(target[1])
+    spectro = meltransform(audio)
+    spectro1 = meltransform(target[0])
+    spectro2 = meltransform(target[1])
     
-    #plot spectrogram
+    audio = audio.numpy()
+    audio1 = audio1.numpy()
+    audio2 = audio2.numpy()
+    
+    plt.figure("audio")
+    plt.subplot(311)
+    plt.plot(audio)
+    plt.ylabel("combined")
+    plt.subplot(312)
+    plt.plot(audio1)
+    plt.ylabel("audio 1")
+    plt.subplot(313)
+    plt.plot(audio2)
+    plt.ylabel("audio 2")
+    
     plt.figure("spectrogram")
     plt.subplot(311)
-    plt.imshow(spectro.log2()[0,:,:].numpy(), cmap='gray')
+    plt.imshow(spectro.log2().detach().numpy(), aspect='auto', origin='lower')
+    plt.ylabel("combined")
+    plt.colorbar()
     plt.subplot(312)
-    plt.imshow(spectro1.log2()[0,:,:].numpy(), cmap='gray')
+    plt.imshow(spectro1.log2().detach().numpy(), aspect='auto', origin='lower')
+    plt.ylabel("audio 1")
+    plt.colorbar()
     plt.subplot(313)
-    plt.imshow(spectro2.log2()[0,:,:].numpy(), cmap='gray')
+    plt.imshow(spectro2.log2().detach().numpy(), aspect='auto', origin='lower')
+    plt.ylabel("audio 2")
+    plt.colorbar()
     plt.show()
-    
 
 def train(args):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -198,16 +217,8 @@ def compute(args):
             plt.plot(x1, label="x1", alpha=0.5)
             plt.legend(loc="upper right")
             plt.subplot(212)
-            plt.plot(np.abs(x1-y1), label="|x1-y1|")
-            plt.legend(loc="upper right")
-            
-            plt.figure("sound 2")
-            plt.subplot(211)
             plt.plot(y2, label="y2")
             plt.plot(x2, label="x2", alpha=0.5)
-            plt.legend(loc="upper right")
-            plt.subplot(212)
-            plt.plot(np.abs(x2-y2), label="|x2-y2|")
             plt.legend(loc="upper right")
         else:
             plt.figure("sound 1")
@@ -216,17 +227,9 @@ def compute(args):
             plt.plot(x1, label="x1", alpha=0.5)
             plt.legend(loc="upper right")
             plt.subplot(212)
-            plt.plot(np.abs(x1-y2), label="|x1-y1|")
-            plt.legend(loc="upper right")
-            
-            plt.figure("sound 2")
             plt.subplot(211)
             plt.plot(y1, label="y1")
             plt.plot(x2, label="x2", alpha=0.5)
-            plt.legend()
-            plt.subplot(212)
-            plt.plot(np.abs(x2-y1), label="|x2-y2|")
-            plt.legend()
         
         plt.show()
     
