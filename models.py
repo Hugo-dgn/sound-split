@@ -108,7 +108,7 @@ class SoundLoss(nn.Module):
         loss1 = torch.mean(self.MelSpectrogram(arrange11).reshape(arrange11.shape[0], -1)**2, dim=1) + torch.mean(self.MelSpectrogram(arrange22).reshape(arrange22.shape[0], -1)**2, dim=1)
         loss2 = torch.mean(self.MelSpectrogram(arrange12).reshape(arrange12.shape[0], -1)**2, dim=1) + torch.mean(self.MelSpectrogram(arrange21).reshape(arrange21.shape[0], -1)**2, dim=1)
         
-        frequencydomainloss = torch.mean(torch.stack([loss1, loss2], dim=1).gather(1, indices.unsqueeze(1)).squeeze(1))
+        frequencydomainloss = 0.01*torch.mean(torch.stack([loss1, loss2], dim=1).gather(1, indices.unsqueeze(1)).squeeze(1))
         
         loss = timedomaineloss + frequencydomainloss
         

@@ -86,7 +86,7 @@ def train(args):
     model = model.to(device)
     
     dataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition)
-    traindataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True, num_workers=3)
+    traindataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True, num_workers=4)
     
     testdataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition, train=False)
     testdatasetloader = DataLoader(testdataset, batch_size=args.batch, shuffle=True)
