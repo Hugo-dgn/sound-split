@@ -229,7 +229,6 @@ def compute(args):
             plt.plot(x1, label="x1", alpha=0.5)
             plt.legend(loc="upper right")
             plt.subplot(212)
-            plt.subplot(211)
             plt.plot(y1, label="y1")
             plt.plot(x2, label="x2", alpha=0.5)
         
