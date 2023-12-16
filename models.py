@@ -247,8 +247,8 @@ class Network3(Network):
         self.b = conv_block(64, 128, kernel_size=3)
         self.d1 = decoder_block(128, 64, 64, kernel_size=3)
         self.d2 = decoder_block(64, 32, 64, kernel_size=17)
-        self.d3 = decoder_block(32, 16, 32, kernel_size=32)
-        self.d4 = decoder_block(16, 8, 16, kernel_size=32)
+        self.d3 = decoder_block(32, 16, 32, kernel_size=25)
+        self.d4 = decoder_block(16, 8, 16, kernel_size=33)
         self.outputs = nn.Conv1d(8, 1, kernel_size=1, padding=0)
         
         self.load()
