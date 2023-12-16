@@ -91,7 +91,7 @@ def train(args):
     testdataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition, train=False)
     testdatasetloader = DataLoader(testdataset, batch_size=args.batch, shuffle=True)
     
-    criterion = SoundLoss()
+    criterion = SoundLoss(SAMPLE_RATE)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=args.gamma)
     model.train()
