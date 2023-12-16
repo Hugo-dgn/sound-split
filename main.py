@@ -2,6 +2,7 @@ import argparse
 from tqdm.auto import tqdm
 
 import torch
+import torchaudio
 import torchinfo
 from torch.utils.data import DataLoader
 
@@ -36,6 +37,27 @@ def listen(args):
         audio_np = target[1].numpy()
         
     sd.play(audio_np, SAMPLE_RATE, blocking=True)
+
+def spectrogram(args):
+    dataset = loader.SoundDataset(DATASET_PATH, length=args.length)
+    audio, target = dataset.__getitem__(args.id)
+    
+    transform = torchaudio.transforms.Spectrogram(n_fft=1024, hop_length=512)
+    
+    spectro = transform(audio)
+    spectro1 = transform(target[0])
+    spectro2 = transform(target[1])
+    
+    #plot spectrogram
+    plt.figure("spectrogram")
+    plt.subplot(311)
+    plt.imshow(spectro.log2()[0,:,:].numpy(), cmap='gray')
+    plt.subplot(312)
+    plt.imshow(spectro1.log2()[0,:,:].numpy(), cmap='gray')
+    plt.subplot(313)
+    plt.imshow(spectro2.log2()[0,:,:].numpy(), cmap='gray')
+    plt.show()
+    
 
 def train(args):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -278,6 +300,14 @@ def main():
     compute_parser.add_argument(
         "--checkpoint", help="checkpoint number", type=int, default=-1)
     compute_parser.set_defaults(func=compute)
+    
+    spectrogram_parser = subparsers.add_parser(
+        "spectrogram", help="Display the spectrogram of the audio")
+    spectrogram_parser.add_argument(
+        "--length", help="length of the audio signal", type=int, default=32000)
+    spectrogram_parser.add_argument(
+        "--id", help="id of the audio", type=int, default=0)
+    spectrogram_parser.set_defaults(func=spectrogram)
     
     args = parser.parse_args()
 
