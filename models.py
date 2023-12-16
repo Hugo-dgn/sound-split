@@ -80,11 +80,11 @@ class Network(nn.Module):
 ####################################################################################################
 
 class SoundLoss(nn.Module):
-    def __init__(self, sample_rate):
+    def __init__(self, device, sample_rate):
         nn.Module.__init__(self)
         self.sample_rate = sample_rate
-        self.to_db = torchaudio.transforms.AmplitudeToDB()
-        self.MelSpectrogram = torchaudio.transforms.MelSpectrogram(sample_rate=self.sample_rate, n_fft=512, hop_length=256, n_mels=128)
+        self.to_db = torchaudio.transforms.AmplitudeToDB().to(device)
+        self.MelSpectrogram = torchaudio.transforms.MelSpectrogram(sample_rate=self.sample_rate, n_fft=512, hop_length=256, n_mels=128).to(device)
         self.relu = nn.ReLU()
         self.db_threshold = 10
     
