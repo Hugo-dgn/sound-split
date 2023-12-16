@@ -85,10 +85,10 @@ def train(args):
     model = Network(args.gen, args.checkpoint)
     model = model.to(device)
     
-    dataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition, device=device)
-    traindataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True)
+    dataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition)
+    traindataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True, num_workers=4)
     
-    testdataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition, device=device, train=False)
+    testdataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition, train=False)
     testdatasetloader = DataLoader(testdataset, batch_size=args.batch, shuffle=True)
     
     criterion = SoundLoss()
@@ -112,6 +112,8 @@ def train(args):
     for epoch in range(args.epochs):
         print(f"Epoch {epoch+1}/{args.epochs}")
         for audio, target in tqdm(traindataloader):
+            audio = audio.to(device)
+            target = target.to(device)
             x1, x2 = model(audio)
             
             optimizer.zero_grad()

@@ -4,23 +4,22 @@ import soundfile as sf
 import torch
 from torch.utils.data import Dataset
 
-def get_relevent(audio, length, device):
+def get_relevent(audio, length):
     odd_length = length + 1 - length % 2
     audio_length = audio.shape[0]
     with torch.no_grad():
         stride = audio_length // odd_length * 3
-        window = torch.ones(odd_length).to(device)
+        window = torch.ones(odd_length)
         indices = torch.conv1d(torch.abs(audio.unsqueeze(0).unsqueeze(0))**2, window.unsqueeze(0).unsqueeze(0), stride=stride).squeeze()
         index = stride*torch.argmax(indices)
     return audio[index:index+length]
 
 class SoundDataset(Dataset):
-    def __init__(self, dir, length, train=True, ratio=0.9, reduce=0, partition=1, device="cpu"):
+    def __init__(self, dir, length, train=True, ratio=0.9, reduce=0, partition=1):
         self.dir = dir
         self.length = length
         self.partition = partition
         self.data = []
-        self.device = torch.device(device)
         for root, dirs, files in os.walk(dir):
             for file in files:
                 if file.endswith(".flac"):
@@ -63,20 +62,17 @@ class SoundDataset(Dataset):
         audio1 = audio1.type(torch.float32)
         audio2 = audio2.type(torch.float32)
         
-        audio1 = audio1.to(self.device)
-        audio2 = audio2.to(self.device)
-        
         if audio1.shape[0] < self.length:
             delta = self.length - audio1.shape[0]
             audio1 = torch.nn.functional.pad(audio1, (0, delta))
         elif audio1.shape[0] > self.length:
-            audio1 = get_relevent(audio1, self.length, self.device)
+            audio1 = get_relevent(audio1, self.length)
         
         if audio2.shape[0] < self.length:
             delta = self.length - audio2.shape[0]
             audio2 = torch.nn.functional.pad(audio2, (0, delta))
         elif audio2.shape[0] > self.length:
-            audio2 = get_relevent(audio2, self.length, self.device)
+            audio2 = get_relevent(audio2, self.length)
         
         audio1 = audio1 / torch.norm(audio1)
         audio2 = audio2 / torch.norm(audio2)
