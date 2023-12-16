@@ -164,7 +164,7 @@ def compute(args):
     
     print(f"Using Network{model.network_id}-Gen{model.gen} on checkpoint {model.checkpoint} and audio {args.id}")
     
-    dataset = loader.SoundDataset(DATASET_PATH, length=args.length, device=device)
+    dataset = loader.SoundDataset(DATASET_PATH, length=args.length)
     audio, target = dataset.__getitem__(args.id)
     
     audio = audio.to(device).reshape(1, -1)
