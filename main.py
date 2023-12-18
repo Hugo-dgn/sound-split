@@ -1,3 +1,6 @@
+import os
+from tqdm.auto import tqdm
+
 import argparse
 from tqdm.auto import tqdm
 
@@ -234,6 +237,36 @@ def compute(args):
         
         plt.show()
     
+    
+def clean(args):
+    if args.network is not None:
+        networks = [os.path.join("save", str(args.network))]
+    else:
+        networks = [os.path.join("save", network) for network in os.listdir("save")]
+    if args.gen is not None:
+        if args.network is None:
+            message = "You must specify a network id to specify a generation id"
+            raise AssertionError(message)
+        if str(args.gen) not in os.listdir(networks[0]):
+            message = f"Generation {args.gen} not found in network {args.network}"
+            raise AssertionError(message)
+        gens = [os.path.join(network, str(args.gen)) for network in networks]
+    else:
+        gens = [os.path.join(network, gen) for network in networks for gen in os.listdir(network)]
+    
+    for gen in tqdm(gens):
+        checkpoints = os.listdir(gen)
+        if len(checkpoints) == 0:
+            pass
+        else:
+            last_checkpoint = max([int(checkpoint.split(".")[0]) for checkpoint in checkpoints])
+        if last_checkpoint == 0:
+            pass
+        else:
+            for checkpoint in range(last_checkpoint):
+                if os.path.exists(os.path.join(gen, str(checkpoint) + ".pth")):
+                    os.remove(os.path.join(gen, str(checkpoint) + ".pth"))
+    
 
 def main():
     parser = argparse.ArgumentParser(description="Sound split")
@@ -312,6 +345,14 @@ def main():
     spectrogram_parser.add_argument(
         "--id", help="id of the audio", type=int, default=0)
     spectrogram_parser.set_defaults(func=spectrogram)
+    
+    clean_parser = subparsers.add_parser(
+        "clean", help="Clean the save folder")
+    clean_parser.add_argument(
+        "--network", help="network topology", type=int)
+    clean_parser.add_argument(
+        "--gen", help="network generation", type=int)
+    clean_parser.set_defaults(func=clean)
     
     args = parser.parse_args()
 
