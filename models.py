@@ -83,10 +83,10 @@ class SoundLoss(nn.Module):
     def __init__(self, device, sample_rate):
         nn.Module.__init__(self)
         self.sample_rate = sample_rate
-        self.to_db = torchaudio.transforms.AmplitudeToDB().to(device)
+        self.top_db = 30
+        self.to_db = torchaudio.transforms.AmplitudeToDB(top_db=self.top_db).to(device)
         self.MelSpectrogram = torchaudio.transforms.MelSpectrogram(sample_rate=self.sample_rate, n_fft=512, hop_length=256, n_mels=32).to(device)
         self.relu = nn.ReLU()
-        self.db_threshold = 20
     
     def forward(self, x1, x2, target):
         
@@ -97,20 +97,9 @@ class SoundLoss(nn.Module):
         arrange22 = x2 - target[:,1,:]
         
         loss1 = torch.mean(arrange11**2, dim=1) + torch.mean(arrange22**2, dim=1)
-        loss1 += 2/self.db_threshold*(torch.mean(self.relu(self.to_db(arrange11) + self.db_threshold)**2, dim=1) + torch.mean(self.relu(self.to_db(arrange22) + self.db_threshold)**2, dim=1))
         loss2 = torch.mean(arrange12**2, dim=1) + torch.mean(arrange21**2, dim=1)
-        loss2 += 2/self.db_threshold*(torch.mean(self.relu(self.to_db(arrange12) + self.db_threshold)**2, dim=1) + torch.mean(self.relu(self.to_db(arrange21) + self.db_threshold)**2, dim=1))
-        
-        loss = torch.stack([loss1, loss2], dim=1)
-        loss, indices = torch.min(loss, dim=1)        
-        timedomaineloss = torch.mean(loss)
-        
-        loss1 = torch.mean(self.MelSpectrogram(arrange11).reshape(arrange11.shape[0], -1)**2, dim=1) + torch.mean(self.MelSpectrogram(arrange22).reshape(arrange22.shape[0], -1)**2, dim=1)
-        loss2 = torch.mean(self.MelSpectrogram(arrange12).reshape(arrange12.shape[0], -1)**2, dim=1) + torch.mean(self.MelSpectrogram(arrange21).reshape(arrange21.shape[0], -1)**2, dim=1)
-        
-        frequencydomainloss = 0.0001*torch.mean(torch.stack([loss1, loss2], dim=1).gather(1, indices.unsqueeze(1)).squeeze(1))
-        
-        loss = timedomaineloss + frequencydomainloss
+        loss = torch.min(torch.stack([loss1, loss2], dim=1), dim=1).values
+        loss = torch.mean(loss)
         
         return loss
 
@@ -269,3 +258,54 @@ class Network3(Network):
         y1 = outputs
         y2 = inputs - outputs
         return y1.squeeze(1), y2.squeeze(1)
+
+####################################################################################################
+
+class Network4(Network):
+    def __init__(self, gen, checkpoint):
+        Network.__init__(self, 4, gen, checkpoint)
+        
+        self.encoder = nn.Sequential(
+            nn.Conv1d(in_channels=1, out_channels=16, kernel_size=31, stride=1, padding="same"),
+            nn.BatchNorm1d(16),
+            nn.MaxPool1d(kernel_size=2, stride=2),
+            nn.PReLU(),
+            nn.Conv1d(in_channels=16, out_channels=32, kernel_size=31, stride=1, padding="same"),
+            nn.BatchNorm1d(32),
+            nn.MaxPool1d(kernel_size=2, stride=2),
+            nn.PReLU(),
+            nn.Conv1d(in_channels=32, out_channels=1, kernel_size=31, stride=1, padding="same"),
+            nn.BatchNorm1d(1),
+            nn.MaxPool1d(kernel_size=2, stride=2),
+            nn.PReLU(),
+        )
+        
+        self.separator = nn.Sequential(
+            nn.Conv1d(in_channels=1, out_channels=32, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(32),
+            nn.Mish(),
+            nn.Conv1d(in_channels=32, out_channels=16, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(16),
+            nn.Mish(),
+            nn.Conv1d(in_channels=16, out_channels=2, kernel_size=3, padding="same")
+        )
+        
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose1d(in_channels=2, out_channels=8, kernel_size=2, stride=2, padding=0),
+            nn.BatchNorm1d(8),
+            nn.PReLU(),
+            nn.ConvTranspose1d(in_channels=8, out_channels=16, kernel_size=2, stride=2, padding=0),
+            nn.BatchNorm1d(16),
+            nn.PReLU(),
+            nn.ConvTranspose1d(in_channels=16, out_channels=2, kernel_size=2, stride=2, padding=0),
+        )
+        
+        self.load()
+        
+    def forward(self, inputs):
+        inputs = inputs.unsqueeze(1)
+        x = self.encoder(inputs)
+        m = self.separator(x)
+        y = m*x
+        y = self.decoder(y)
+        return y[:,0,:], y[:,1,:]

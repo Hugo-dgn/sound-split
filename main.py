@@ -139,7 +139,8 @@ def train(args):
                 audio = audio.to(device)
                 target = target.to(device)
                 x1, x2 = model(audio)
-                test_loss += criterion(x1, x2, target).cpu().item()
+                loss = criterion(x1, x2, target)
+                test_loss += loss.cpu().item()
                 
                 del audio, target, x1, x2
                 torch.cuda.empty_cache()
