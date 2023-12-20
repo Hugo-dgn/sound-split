@@ -1,6 +1,4 @@
 datasetaudio.zip
-test/
-train/
 push.bash
 .vscode
 venv
@@ -13,3 +11,5 @@ wandb/
 dgx.bash
 out.out1
 out.out2
+test_dataset/
+train_dataset/

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+mkdir -p train_dataset
+mkdir -p test_dataset
+
 if [ "$1" = "dev" ]; then
     TRAIN_DATASET_URL="https://www.openslr.org/resources/12/dev-clean.tar.gz"
     wget "$TRAIN_DATASET_URL"

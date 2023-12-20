@@ -29,7 +29,7 @@ def listen(args):
     if not SOUND:
         message = "Sounddevice module not found. You won't be able to listen to the audio."
         raise AssertionError(message)
-    dataset = loader.SoundDataset(DATASET_PATH, length=args.length)
+    dataset = loader.SoundDataset(TRAIN_DATASET_PATH, letrain_ngth=args.length)
     audio, target = dataset.__getitem__(args.id)
         
     if args.audio == 0:
@@ -42,7 +42,7 @@ def listen(args):
     sd.play(audio_np, SAMPLE_RATE, blocking=True)
 
 def spectrogram(args):
-    dataset = loader.SoundDataset(DATASET_PATH, length=args.length)
+    dataset = loader.SoundDataset(TRAIN_DATASET_PATH, letrain_ngth=args.length)
     audio, target = dataset.__getitem__(args.id)
     
     meltransform = torchaudio.transforms.MelSpectrogram(sample_rate=SAMPLE_RATE, n_fft=1024, hop_length=512, n_mels=128)
@@ -88,11 +88,11 @@ def train(args):
     model = Network(args.gen, args.checkpoint)
     model = model.to(device)
     
-    dataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition)
+    dataset = loader.SoundDataset(TRAIN_DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition)
     traindataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True, num_workers=4)
     
-    testdataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition, train=False)
-    testdatasetloader = DataLoader(testdataset, batch_size=args.batch, shuffle=True)
+    testdataset = loader.SoundDataset(TEST_DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition)
+    testdatasetloader = DataLoader(testdataset, batch_size=args.batch, shuffle=False)
     
     timecriterion = TmeDomainLoss()
     freqcriterion = FreqDomainLoss()
@@ -176,7 +176,7 @@ def compute(args):
     
     print(f"Using Network{model.network_id}-Gen{model.gen} on checkpoint {model.checkpoint} and audio {args.id}")
     
-    dataset = loader.SoundDataset(DATASET_PATH, length=args.length)
+    dataset = loader.SoundDataset(TRAIN_DATASET_PATH, letrain_ngth=args.length)
     audio, target = dataset.__getitem__(args.id)
     
     audio = audio.to(device).reshape(1, -1)
@@ -371,6 +371,7 @@ def main():
         parser.print_help()
 
 if __name__ == "__main__":
-    DATASET_PATH = 'dataset'
+    TRAIN_DATASET_PATH = 'train_dataset'
+    TEST_DATASET_PATH = 'test_dataset'
     SAMPLE_RATE = 16000
     main()

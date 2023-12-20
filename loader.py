@@ -15,7 +15,7 @@ def get_relevent(audio, length):
     return audio[index:index+length]
 
 class SoundDataset(Dataset):
-    def __init__(self, dir, length, train=True, ratio=0.9, reduce=0, partition=1):
+    def __init__(self, dir, length, reduce=0, partition=1):
         self.dir = dir
         self.length = length
         self.partition = partition
@@ -24,17 +24,11 @@ class SoundDataset(Dataset):
             for file in files:
                 if file.endswith(".flac"):
                     self.data.append(os.path.join(root, file))
-        
-        n = len(self.data)
-        n_target = int(n*ratio)
-        if train:
+
+        if reduce > 0:
+            n = len(self.data)
+            n_target = int(n*(1-reduce))
             self.data = self.data[:n_target]
-            if reduce > 0:
-                n = len(self.data)
-                n_target = int(n*(1-reduce))
-                self.data = self.data[:n_target]
-        else:
-            self.data = self.data[n_target:]
         
         step = len(self.data)//partition
         self.data = self.data[:step*partition]
