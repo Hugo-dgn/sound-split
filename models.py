@@ -79,14 +79,9 @@ class Network(nn.Module):
 
 ####################################################################################################
 
-class SoundLoss(nn.Module):
-    def __init__(self, device, sample_rate):
+class TmeDomainLoss(nn.Module):
+    def __init__(self):
         nn.Module.__init__(self)
-        self.sample_rate = sample_rate
-        self.top_db = 30
-        self.to_db = torchaudio.transforms.AmplitudeToDB(top_db=self.top_db).to(device)
-        self.MelSpectrogram = torchaudio.transforms.MelSpectrogram(sample_rate=self.sample_rate, n_fft=512, hop_length=256, n_mels=32).to(device)
-        self.relu = nn.ReLU()
     
     def forward(self, x1, x2, target):
         
@@ -98,6 +93,34 @@ class SoundLoss(nn.Module):
         
         loss1 = torch.mean(arrange11**2, dim=1) + torch.mean(arrange22**2, dim=1)
         loss2 = torch.mean(arrange12**2, dim=1) + torch.mean(arrange21**2, dim=1)
+        loss = torch.min(torch.stack([loss1, loss2], dim=1), dim=1).values
+        loss = torch.mean(loss)
+        
+        return loss
+
+class FreqDomainLoss(nn.Module):
+    def __init__(self):
+        nn.Module.__init__(self)
+    
+    def forward(self, x1, x2, target):
+        transform = torchaudio.transforms.Spectrogram(n_fft=512, hop_length=256, power=None).to(x1.device)
+        
+        spectro1 = transform(x1)
+        spectro2 = transform(x2)
+        spectro_target = transform(target)
+        
+        power1 = torch.abs(spectro1)
+        power2 = torch.abs(spectro2)
+        power_target = torch.abs(spectro_target)
+        
+        arrange11 = power1 - power_target[:,0,:,:]
+        arrange12 = power1 - power_target[:,1,:,:]
+        
+        arrange21 = power2 - power_target[:,0,:,:]
+        arrange22 = power2 - power_target[:,1,:,:]
+        
+        loss1 = torch.mean(arrange11**2, dim=(1,2)) + torch.mean(arrange22**2, dim=(1,2))
+        loss2 = torch.mean(arrange12**2, dim=(1,2)) + torch.mean(arrange21**2, dim=(1,2))
         loss = torch.min(torch.stack([loss1, loss2], dim=1), dim=1).values
         loss = torch.mean(loss)
         
@@ -143,7 +166,7 @@ class Network1(Network):
         
 ####################################################################################################
 
-class conv_block(nn.Module):
+class conv1D_block(nn.Module):
     def __init__(self, in_c, out_c, kernel_size):
         super().__init__()
         self.network = nn.Sequential(
@@ -158,21 +181,21 @@ class conv_block(nn.Module):
         y = self.network(x)
         return y
 
-class encoder_block(nn.Module):
+class encoder1D_block(nn.Module):
     def __init__(self, in_c, out_c, kernel_size):
         super().__init__()
-        self.conv = conv_block(in_c, out_c, kernel_size)
+        self.conv = conv1D_block(in_c, out_c, kernel_size)
         self.pool = nn.MaxPool1d(kernel_size=2, stride=2)
     def forward(self, x):
         y = self.conv(x)
         p = self.pool(y)
         return y, p
 
-class decoder_block(nn.Module):
+class decoder1D_block(nn.Module):
     def __init__(self, in_c, out_c, in_skip, kernel_size):
         super().__init__()
         self.up = nn.ConvTranspose1d(in_c, out_c, kernel_size=2, stride=2, padding=0)
-        self.conv = conv_block(out_c+in_skip, out_c, kernel_size)
+        self.conv = conv1D_block(out_c+in_skip, out_c, kernel_size)
     def forward(self, inputs, skip):
         x = self.up(inputs)
         min_size = min(x.shape[2], skip.shape[2])
@@ -193,15 +216,15 @@ class Network2(Network):
     def __init__(self, gen, checkpoint):
         Network.__init__(self, 2, gen, checkpoint)
         
-        self.e1 = encoder_block(1, 16, kernel_size=25)
-        self.e2 = encoder_block(16, 32, kernel_size=13)
-        self.e3 = encoder_block(32, 64, kernel_size=7)
-        self.e4 = encoder_block(64, 64, kernel_size=5)
-        self.b = conv_block(64, 128, kernel_size=3)
-        self.d1 = decoder_block(128, 64, 64, kernel_size=3)
-        self.d2 = decoder_block(64, 32, 64, kernel_size=3)
-        self.d3 = decoder_block(32, 16, 32, kernel_size=3)
-        self.d4 = decoder_block(16, 8, 16, kernel_size=3)
+        self.e1 = encoder1D_block(1, 16, kernel_size=25)
+        self.e2 = encoder1D_block(16, 32, kernel_size=13)
+        self.e3 = encoder1D_block(32, 64, kernel_size=7)
+        self.e4 = encoder1D_block(64, 64, kernel_size=5)
+        self.b = conv1D_block(64, 128, kernel_size=3)
+        self.d1 = decoder1D_block(128, 64, 64, kernel_size=3)
+        self.d2 = decoder1D_block(64, 32, 64, kernel_size=3)
+        self.d3 = decoder1D_block(32, 16, 32, kernel_size=3)
+        self.d4 = decoder1D_block(16, 8, 16, kernel_size=3)
         self.outputs = nn.Conv1d(8, 1, kernel_size=1, padding=0)
         
         self.load()
@@ -229,15 +252,15 @@ class Network3(Network):
     def __init__(self, gen, checkpoint):
         Network.__init__(self, 3, gen, checkpoint)
         
-        self.e1 = encoder_block(1, 16, kernel_size=25)
-        self.e2 = encoder_block(16, 32, kernel_size=13)
-        self.e3 = encoder_block(32, 64, kernel_size=7)
-        self.e4 = encoder_block(64, 64, kernel_size=5)
-        self.b = conv_block(64, 128, kernel_size=3)
-        self.d1 = decoder_block(128, 64, 64, kernel_size=3)
-        self.d2 = decoder_block(64, 32, 64, kernel_size=17)
-        self.d3 = decoder_block(32, 16, 32, kernel_size=25)
-        self.d4 = decoder_block(16, 8, 16, kernel_size=33)
+        self.e1 = encoder1D_block(1, 16, kernel_size=25)
+        self.e2 = encoder1D_block(16, 32, kernel_size=13)
+        self.e3 = encoder1D_block(32, 64, kernel_size=7)
+        self.e4 = encoder1D_block(64, 64, kernel_size=5)
+        self.b = conv1D_block(64, 128, kernel_size=3)
+        self.d1 = decoder1D_block(128, 64, 64, kernel_size=3)
+        self.d2 = decoder1D_block(64, 32, 64, kernel_size=17)
+        self.d3 = decoder1D_block(32, 16, 32, kernel_size=25)
+        self.d4 = decoder1D_block(16, 8, 16, kernel_size=33)
         self.outputs = nn.Conv1d(8, 1, kernel_size=1, padding=0)
         
         self.load()
@@ -265,48 +288,40 @@ class Network4(Network):
     def __init__(self, gen, checkpoint):
         Network.__init__(self, 4, gen, checkpoint)
         
-        self.encoder = nn.Sequential(
-            nn.Conv1d(in_channels=1, out_channels=16, kernel_size=31, stride=1, padding="same"),
-            nn.BatchNorm1d(16),
-            nn.MaxPool1d(kernel_size=2, stride=2),
-            nn.PReLU(),
-            nn.Conv1d(in_channels=16, out_channels=32, kernel_size=31, stride=1, padding="same"),
-            nn.BatchNorm1d(32),
-            nn.MaxPool1d(kernel_size=2, stride=2),
-            nn.PReLU(),
-            nn.Conv1d(in_channels=32, out_channels=1, kernel_size=31, stride=1, padding="same"),
-            nn.BatchNorm1d(1),
-            nn.MaxPool1d(kernel_size=2, stride=2),
-            nn.PReLU(),
-        )
-        
-        self.separator = nn.Sequential(
-            nn.Conv1d(in_channels=1, out_channels=32, kernel_size=3, padding="same"),
-            nn.BatchNorm1d(32),
+        self.sparator = nn.Sequential(
+            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=(11, 11), padding="same"),
+            nn.BatchNorm2d(32),
             nn.Mish(),
-            nn.Conv1d(in_channels=32, out_channels=16, kernel_size=3, padding="same"),
-            nn.BatchNorm1d(16),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(11, 11), padding="same"),
+            nn.BatchNorm2d(64),
             nn.Mish(),
-            nn.Conv1d(in_channels=16, out_channels=2, kernel_size=3, padding="same")
-        )
-        
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose1d(in_channels=2, out_channels=8, kernel_size=2, stride=2, padding=0),
-            nn.BatchNorm1d(8),
-            nn.PReLU(),
-            nn.ConvTranspose1d(in_channels=8, out_channels=16, kernel_size=2, stride=2, padding=0),
-            nn.BatchNorm1d(16),
-            nn.PReLU(),
-            nn.ConvTranspose1d(in_channels=16, out_channels=2, kernel_size=2, stride=2, padding=0),
+            nn.Conv2d(in_channels=64, out_channels=32, kernel_size=(11, 11), padding="same"),
+            nn.BatchNorm2d(32),
+            nn.Mish(),
+            nn.Conv2d(in_channels=32, out_channels=2, kernel_size=(11, 11), padding="same")
         )
         
         self.load()
         
     def forward(self, inputs):
-        transform = torchaudio.transforms.Spectrogram(n_fft=512, hop_length=256).to(inputs.device)
+        transform = torchaudio.transforms.Spectrogram(n_fft=512, hop_length=256, power=None).to(inputs.device)
         inverse_transform = torchaudio.transforms.InverseSpectrogram(n_fft=512, hop_length=256).to(inputs.device)
         
         inputs = inputs.unsqueeze(1)
         spectro = transform(inputs)
-        signal = inverse_transform(spectro)
-        pass
+        
+        power = torch.abs(spectro)
+        phase = torch.angle(spectro)
+        
+        mask = self.sparator(power)
+        power = power * mask
+        power1 = power[:,0,:,:].unsqueeze(1)
+        power2 = power[:,1,:,:].unsqueeze(1)
+        
+        spectro1 = power1 * torch.exp(1j * phase)
+        spectro2 = power2 * torch.exp(1j * phase)
+        
+        signal1 = inverse_transform(spectro1).squeeze(1)
+        signal2 = inverse_transform(spectro2).squeeze(1)
+        
+        return signal1, signal2

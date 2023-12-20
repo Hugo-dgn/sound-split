@@ -23,7 +23,7 @@ except OSError as e:
     SOUND = False
 
 import loader
-from models import get_network, SoundLoss
+from models import get_network, FreqDomainLoss, TmeDomainLoss
 
 def listen(args):
     if not SOUND:
@@ -94,7 +94,7 @@ def train(args):
     testdataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition, train=False)
     testdatasetloader = DataLoader(testdataset, batch_size=args.batch, shuffle=True)
     
-    criterion = SoundLoss(device, SAMPLE_RATE)
+    criterion = FreqDomainLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=args.gamma)
     model.train()
@@ -174,7 +174,7 @@ def compute(args):
     audio = audio.to(device).reshape(1, -1)
     x1, x2 = model(audio)
     
-    criterion = SoundLoss(device, SAMPLE_RATE)
+    criterion = FreqDomainLoss(device)
     
     loss = criterion(x1, x2, target.unsqueeze(0))
     
