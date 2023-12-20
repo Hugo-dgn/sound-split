@@ -298,7 +298,8 @@ class Network4(Network):
             nn.Conv2d(in_channels=64, out_channels=32, kernel_size=(11, 11), padding="same"),
             nn.BatchNorm2d(32),
             nn.Mish(),
-            nn.Conv2d(in_channels=32, out_channels=2, kernel_size=(11, 11), padding="same")
+            nn.Conv2d(in_channels=32, out_channels=2, kernel_size=(11, 11), padding="same"),
+            nn.Sigmoid()
         )
         
         self.load()
@@ -323,5 +324,40 @@ class Network4(Network):
         
         signal1 = inverse_transform(spectro1).squeeze(1)
         signal2 = inverse_transform(spectro2).squeeze(1)
+        
+        return signal1, signal2
+
+####################################################################################################
+
+class Network5(Network):
+    def __init__(self, gen, checkpoint):
+        Network.__init__(self, 5, gen, checkpoint)
+        
+        self.separator = nn.RNN(input_size=257, hidden_size=257, num_layers=2, batch_first=True)
+        self.activation = nn.Sigmoid()
+        
+        self.load()
+    
+    def forward(self, inputs):
+        transform = torchaudio.transforms.Spectrogram(n_fft=512, hop_length=256, power=None).to(inputs.device)
+        inverse_transform = torchaudio.transforms.InverseSpectrogram(n_fft=512, hop_length=256).to(inputs.device)
+        
+        spectro = transform(inputs)
+        
+        power = torch.abs(spectro)
+        phase = torch.angle(spectro)
+        
+        mask = self.separator(torch.transpose(power, 1, 2))[0]
+        mask = torch.transpose(mask, 1, 2)
+        mask = self.activation(mask)
+        
+        power1 = power * mask
+        power2 = power - power1
+        
+        spectro1 = power1 * torch.exp(1j * phase)
+        spectro2 = power2 * torch.exp(1j * phase)
+        
+        signal1 = inverse_transform(spectro1)
+        signal2 = inverse_transform(spectro2)
         
         return signal1, signal2
