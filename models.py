@@ -303,9 +303,10 @@ class Network4(Network):
         self.load()
         
     def forward(self, inputs):
+        transform = torchaudio.transforms.Spectrogram(n_fft=512, hop_length=256).to(inputs.device)
+        inverse_transform = torchaudio.transforms.InverseSpectrogram(n_fft=512, hop_length=256).to(inputs.device)
+        
         inputs = inputs.unsqueeze(1)
-        x = self.encoder(inputs)
-        m = self.separator(x)
-        y = m*x
-        y = self.decoder(y)
-        return y[:,0,:], y[:,1,:]
+        spectro = transform(inputs)
+        signal = inverse_transform(spectro)
+        pass
