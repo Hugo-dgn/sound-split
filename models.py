@@ -339,6 +339,7 @@ class Network5(Network):
         self.load()
     
     def forward(self, inputs):
+        length = inputs.shape[1]
         transform = torchaudio.transforms.Spectrogram(n_fft=512, hop_length=256, power=None).to(inputs.device)
         inverse_transform = torchaudio.transforms.InverseSpectrogram(n_fft=512, hop_length=256).to(inputs.device)
         
@@ -357,7 +358,7 @@ class Network5(Network):
         spectro1 = power1 * torch.exp(1j * phase)
         spectro2 = power2 * torch.exp(1j * phase)
         
-        signal1 = inverse_transform(spectro1)
-        signal2 = inverse_transform(spectro2)
+        signal1 = inverse_transform(spectro1, length)
+        signal2 = inverse_transform(spectro2, length)
         
         return signal1, signal2

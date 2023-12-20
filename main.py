@@ -94,7 +94,8 @@ def train(args):
     testdataset = loader.SoundDataset(DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition, train=False)
     testdatasetloader = DataLoader(testdataset, batch_size=args.batch, shuffle=True)
     
-    criterion = FreqDomainLoss()
+    timecriterion = TmeDomainLoss()
+    freqcriterion = FreqDomainLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=args.gamma)
     model.train()
@@ -120,12 +121,17 @@ def train(args):
             x1, x2 = model(audio)
             
             optimizer.zero_grad()
-            loss = criterion(x1, x2, target)
+            freqloss = freqcriterion(x1, x2, target)
+            timeloss = timecriterion(x1, x2, target)
+            loss = freqloss + 10*timeloss
             loss.backward()
             optimizer.step()
             
             if args.log:
                 wandb.log({"loss": loss.detach().cpu().item()})
+                
+                wandb.log({"freqloss": freqloss.detach().cpu().item()})
+                wandb.log({"timeloss": timeloss.detach().cpu().item()})
                 
             del audio, target, x1, x2, loss
             torch.cuda.empty_cache()
@@ -139,7 +145,9 @@ def train(args):
                 audio = audio.to(device)
                 target = target.to(device)
                 x1, x2 = model(audio)
-                loss = criterion(x1, x2, target)
+                freqloss = freqcriterion(x1, x2, target)
+                timeloss = timecriterion(x1, x2, target)
+                loss = freqloss + 10*timeloss
                 test_loss += loss.cpu().item()
                 
                 del audio, target, x1, x2
