@@ -115,7 +115,7 @@ def train(args):
     
     for epoch in range(args.epochs):
         print(f"Epoch {epoch+1}/{args.epochs}")
-        for audio, target in tqdm(traindataloader):
+        for i, (audio, target) in tqdm(enumerate(traindataloader), total=len(traindataloader)):
             audio = audio.to(device)
             target = target.to(device)
             x1, x2 = model(audio)
@@ -132,6 +132,9 @@ def train(args):
                 
                 wandb.log({"freqloss": freqloss.detach().cpu().item()})
                 wandb.log({"timeloss": timeloss.detach().cpu().item()})
+            
+            if (i+1) % args.save == 0:
+                model.save()
                 
             del audio, target, x1, x2, loss
             torch.cuda.empty_cache()
@@ -155,8 +158,6 @@ def train(args):
         
         if args.log:
             wandb.log({"test_loss": test_loss/len(testdatasetloader)})
-        
-        model.save()
     
     if args.log:
         wandb.finish()
@@ -315,6 +316,8 @@ def main():
         "--gamma", help="learning rate decay", type=float, default=0.9)
     train_parser.add_argument(
         "--log", help="log the training to wandb", action="store_true")
+    train_parser.add_argument(
+        "--save", help="number of step between each save", type=int, default=100)
     train_parser.set_defaults(func=train)
     
     info_parser = subparsers.add_parser(
