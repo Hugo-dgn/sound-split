@@ -23,7 +23,7 @@ except OSError as e:
     SOUND = False
 
 import loader
-from models import get_network, FreqDomainLoss, TmeDomainLoss
+from models import get_network, FreqDomainLoss, TmeDomainLoss, uPITLoss
 
 def listen(args):
     if not SOUND:
@@ -96,6 +96,7 @@ def train(args):
     
     timecriterion = TmeDomainLoss()
     freqcriterion = FreqDomainLoss()
+    uiptcreiterion = uPITLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=args.gamma)
     model.train()
@@ -123,14 +124,16 @@ def train(args):
             optimizer.zero_grad()
             freqloss = freqcriterion(x1, x2, target)
             timeloss = timecriterion(x1, x2, target)
-            loss = freqloss + 10*timeloss
+            upitloss = uiptcreiterion(x1, x2, target)
+            loss = 0*freqloss + 0*timeloss + upitloss
             loss.backward()
             optimizer.step()
             
             if args.log:
                 wandb.log({"loss": loss.detach().cpu().item(),
                            "freqloss": freqloss.detach().cpu().item(),
-                           "timeloss": timeloss.detach().cpu().item()})
+                           "timeloss": timeloss.detach().cpu().item(),
+                           "upitloss": upitloss.detach().cpu().item()})
             
             if (i+1) % args.save == 0:
                 model.save()

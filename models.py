@@ -126,6 +126,23 @@ class FreqDomainLoss(nn.Module):
         
         return loss
 
+class uPITLoss(nn.Module):
+    def __init__(self):
+        nn.Module.__init__(self)
+        self.eps = 1e-10
+    
+    def forward(self, x1, x2, target):
+        
+        p = torch.cat([x1.unsqueeze(1), x2.unsqueeze(1)], dim=1)
+        sisnr1 = 10*torch.log(torch.sum(torch.mean(target**2/(p-target + self.eps)**2, dim=2), dim=1))
+        
+        p = torch.cat([x2.unsqueeze(1), x1.unsqueeze(1)], dim=1)
+        sisnr2 = 10*torch.log(torch.sum(torch.mean(target**2/(p-target + self.eps)**2, dim=2), dim=1))
+        
+        sisnr = torch.max(torch.stack([sisnr1, sisnr2], dim=1), dim=1).values
+        
+        return torch.mean(-sisnr)
+
 ####################################################################################################
 
 class Network1(Network):
