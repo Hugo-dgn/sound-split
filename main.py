@@ -124,15 +124,15 @@ def train(args):
             optimizer.zero_grad()
             
             if model.freq_loss > 0:
-                freqloss = freqcriterion(x1, x2, target.unsqueeze(0))
+                freqloss = freqcriterion(x1, x2, target)
             else:
                 freqloss = 0
             if model.time_loss > 0:
-                timeloss = timecriterion(x1, x2, target.unsqueeze(0))
+                timeloss = timecriterion(x1, x2, target)
             else:
                 timeloss = 0
             if model.uipt_loss > 0:
-                uiptloss = uiptcreiterion(x1, x2, target.unsqueeze(0))
+                uiptloss = uiptcreiterion(x1, x2, target)
             else:
                 uiptloss = 0
             
@@ -148,6 +148,7 @@ def train(args):
                     report["timeloss"] = timeloss.detach().cpu().item()
                 if model.uipt_loss > 0:
                     report["uiptloss"] = uiptloss.detach().cpu().item()
+                report["loss"] = loss.detach().cpu().item()
                 wandb.log(report)
             
             if (i+1) % args.save == 0:
