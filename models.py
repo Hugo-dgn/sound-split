@@ -196,17 +196,24 @@ class decoder1D_block(nn.Module):
         super().__init__()
         self.up = nn.ConvTranspose1d(in_c, out_c, kernel_size=2, stride=2, padding=0)
         self.conv = conv1D_block(out_c+in_skip, out_c, kernel_size)
-    def forward(self, inputs, skip):
+    def forward(self, inputs, skip=None, length=None):
         x = self.up(inputs)
-        min_size = min(x.shape[2], skip.shape[2])
-        max_size = max(x.shape[2], skip.shape[2])
-        delta = max_size - min_size
-        if delta > 0:
-            if x.shape[2] == min_size:
-                x = nn.functional.pad(x, (0, delta))
-            else:
-                skip = nn.functional.pad(skip, (0, delta))
-        x = torch.cat([x, skip], axis=1)
+        if skip is not None:
+            min_size = min(x.shape[2], skip.shape[2])
+            max_size = max(x.shape[2], skip.shape[2])
+            delta = max_size - min_size
+            if delta > 0:
+                if x.shape[2] == min_size:
+                    x = nn.functional.pad(x, (0, delta))
+                else:
+                    skip = nn.functional.pad(skip, (0, delta))
+            x = torch.cat([x, skip], axis=1)
+        else:
+            if length is not None:
+                if x.shape[2] > length:
+                    x = x[:,:,:length]
+                elif x.shape[2] < length:
+                    x = nn.functional.pad(x, (0, length-x.shape[2]))
         x = self.conv(x)
         return x
 
@@ -353,12 +360,53 @@ class Network5(Network):
         mask = self.activation(mask)
         
         power1 = power * mask
-        power2 = power - power1
         
         spectro1 = power1 * torch.exp(1j * phase)
-        spectro2 = power2 * torch.exp(1j * phase)
         
         signal1 = inverse_transform(spectro1, length)
-        signal2 = inverse_transform(spectro2, length)
+        signal2 = inputs.squeeze(1) - signal1
         
         return signal1, signal2
+
+####################################################################################################
+
+class Network6(Network):
+    def __init__(self, gen, checkpoint):
+        Network.__init__(self, 3, gen, checkpoint)
+        
+        self.e1 = encoder1D_block(1, 16, kernel_size=25)
+        self.e2 = encoder1D_block(16, 32, kernel_size=13)
+        self.e3 = encoder1D_block(32, 16, kernel_size=7)
+        self.e4 = encoder1D_block(16, 1, kernel_size=5)
+        
+        self.separator = nn.RNN(input_size=1, hidden_size=1, num_layers=1, batch_first=True)
+        self.activation = nn.Sigmoid()
+        
+        self.d1 = decoder1D_block(1, 16, 0, kernel_size=3)
+        self.d2 = decoder1D_block(16, 32, 0, kernel_size=17)
+        self.d3 = decoder1D_block(32, 16, 0, kernel_size=25)
+        self.d4 = decoder1D_block(16, 8, 0, kernel_size=33)
+        self.outputs = nn.Conv1d(8, 1, kernel_size=1, padding=0)
+        
+        self.load()
+        
+    def forward(self, inputs):
+        inputs = inputs.unsqueeze(1)
+        s1, p1 = self.e1(inputs)
+        s2, p2 = self.e2(p1)
+        s3, p3 = self.e3(p2)
+        s4, p4 = self.e4(p3)
+        
+        m = torch.transpose(self.separator(torch.transpose(p4, 1, 2))[0], 1, 2)
+        m = self.activation(m)
+        b = m*p4
+        
+        d1 = self.d1(b, length=s4.shape[2])
+        d2 = self.d2(d1, length=s3.shape[2])
+        d3 = self.d3(d2, length=s2.shape[2])
+        d4 = self.d4(d3, length=s1.shape[2])
+        outputs = self.outputs(d4)
+        
+        y1 = outputs
+        y2 = inputs - outputs
+        return y1.squeeze(1), y2.squeeze(1)
