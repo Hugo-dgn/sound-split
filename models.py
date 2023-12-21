@@ -431,3 +431,44 @@ class Network6(Network):
         y1 = outputs
         y2 = inputs - outputs
         return y1.squeeze(1), y2.squeeze(1)
+
+####################################################################################################
+
+class Network7(Network):
+    def __init__(self, gen, checkpoint):
+        Network.__init__(self, 7, gen, checkpoint)
+        
+        self.e1 = encoder1D_block(1, 16, kernel_size=25)
+        self.e2 = encoder1D_block(16, 32, kernel_size=13)
+        self.e3 = encoder1D_block(32, 16, kernel_size=7)
+        self.e4 = encoder1D_block(16, 2, kernel_size=5)
+        
+        self.separator = nn.RNN(input_size=2, hidden_size=2, num_layers=2, batch_first=True)
+        
+        self.d1 = decoder1D_block(2, 16, 0, kernel_size=3)
+        self.d2 = decoder1D_block(16, 32, 0, kernel_size=17)
+        self.d3 = decoder1D_block(32, 16, 0, kernel_size=25)
+        self.d4 = decoder1D_block(16, 8, 0, kernel_size=33)
+        self.outputs = nn.Conv1d(8, 2, kernel_size=1, padding=0)
+        
+        self.load()
+        
+    def forward(self, inputs):
+        inputs = inputs.unsqueeze(1)
+        s1, p1 = self.e1(inputs)
+        s2, p2 = self.e2(p1)
+        s3, p3 = self.e3(p2)
+        s4, p4 = self.e4(p3)
+        
+        m = torch.transpose(self.separator(torch.transpose(p4, 1, 2))[0], 1, 2)
+        b = m*p4
+        
+        d1 = self.d1(b, length=s4.shape[2])
+        d2 = self.d2(d1, length=s3.shape[2])
+        d3 = self.d3(d2, length=s2.shape[2])
+        d4 = self.d4(d3, length=s1.shape[2])
+        outputs = self.outputs(d4)
+        
+        y1 = outputs[:,0,:]
+        y2 = outputs[:,1,:]
+        return y1.squeeze(1), y2.squeeze(1)
