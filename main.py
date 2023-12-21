@@ -122,18 +122,16 @@ def train(args):
             x1, x2 = model(audio)
             
             optimizer.zero_grad()
-            freqloss = freqcriterion(x1, x2, target)
+            uiptloss = uiptcreiterion(x1, x2, target)
             timeloss = timecriterion(x1, x2, target)
-            upitloss = uiptcreiterion(x1, x2, target)
-            loss = 0*freqloss + 0*timeloss + upitloss
+            loss = uiptloss + timeloss
             loss.backward()
             optimizer.step()
             
             if args.log:
                 wandb.log({"loss": loss.detach().cpu().item(),
-                           "freqloss": freqloss.detach().cpu().item(),
-                           "timeloss": timeloss.detach().cpu().item(),
-                           "upitloss": upitloss.detach().cpu().item()})
+                           "uiptloss": uiptloss.detach().cpu().item(),
+                           "timeloss": timeloss.detach().cpu().item()})
             
             if (i+1) % args.save == 0:
                 model.save()
@@ -144,7 +142,9 @@ def train(args):
         scheduler.step()
         
         print("Testing")
-        test_loss = 0
+        test_freq_loss = 0
+        test_time_loss = 0
+        test_uipt_loss = 0
         with torch.no_grad():
             for audio, target in tqdm(testdatasetloader):
                 audio = audio.to(device)
@@ -152,14 +152,20 @@ def train(args):
                 x1, x2 = model(audio)
                 freqloss = freqcriterion(x1, x2, target)
                 timeloss = timecriterion(x1, x2, target)
-                loss = freqloss + 10*timeloss
-                test_loss += loss.cpu().item()
+                uiptloss = uiptcreiterion(x1, x2, target)
+                
+                test_freq_loss += freqloss.detach().cpu().item()
+                test_time_loss += timeloss.detach().cpu().item()
+                test_uipt_loss += uiptloss.detach().cpu().item()
                 
                 del audio, target, x1, x2
                 torch.cuda.empty_cache()
+        model.save()
         
         if args.log:
-            wandb.log({"test_loss": test_loss/len(testdatasetloader)})
+            wandb.log({"test_freq_loss": test_freq_loss/len(testdatasetloader)},
+                      {"test_time_loss": test_time_loss/len(testdatasetloader)},
+                      {"test_uipt_loss": test_uipt_loss/len(testdatasetloader)})
     
     if args.log:
         wandb.finish()
