@@ -1,8 +1,9 @@
 import os
 
 import torch
-import torchaudio
 import torch.nn as nn
+import torchaudio
+from torchmetrics.functional.audio import scale_invariant_signal_noise_ratio
 
 def get_checkpoint(network_id, gen, checkpoint):
     network_path = os.path.join("save", str(network_id))
@@ -137,15 +138,11 @@ class uPITLoss(nn.Module):
     
     def forward(self, x1, x2, target):
         
-        target_power = torch.sum(target**2, dim=2)
-        
         p = torch.cat([x1.unsqueeze(1), x2.unsqueeze(1)], dim=1)
-        delta_power = torch.sum((p - target)**2, dim=2)
-        sisnr1 = torch.sum(10*torch.log((target_power + self.eps)/(delta_power + self.eps)), dim=1)
+        sisnr1 = torch.sum(scale_invariant_signal_noise_ratio(p, target), dim=1)
         
         p = torch.cat([x2.unsqueeze(1), x1.unsqueeze(1)], dim=1)
-        delta_power = torch.sum((p - target)**2, dim=2)
-        sisnr2 = torch.sum(10*torch.log((target_power + self.eps)/(delta_power + self.eps)), dim=1)
+        sisnr2 = torch.sum(scale_invariant_signal_noise_ratio(p, target), dim=1)
         
         sisnr = torch.max(torch.stack([sisnr1, sisnr2], dim=1), dim=1).values
         

@@ -68,9 +68,6 @@ class SoundDataset(Dataset):
         elif audio2.shape[0] > self.length:
             audio2 = get_relevent(audio2, self.length)
         
-        audio1 = audio1 / torch.norm(audio1)
-        audio2 = audio2 / torch.norm(audio2)
-        
         audio = audio1 + audio2
         target = torch.stack([audio1, audio2], dim=0)
         return audio, target
