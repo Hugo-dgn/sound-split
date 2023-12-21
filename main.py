@@ -109,6 +109,9 @@ def train(args):
         resume="allow",
         config={
         "network": args.network,
+        "time_loss": model.time_loss,
+        "freq_loss": model.freq_loss,
+        "uipt_loss": model.uipt_loss,
         }
         )
     
