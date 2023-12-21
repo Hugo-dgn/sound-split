@@ -56,6 +56,10 @@ class Network(nn.Module):
         self.network_id = network_id
         self.gen = gen
         self.checkpoint = checkpoint
+        
+        self.freq_loss = 1
+        self.time_loss = 1
+        self.upit_loss = 1
     
     def save(self):
         checkpoint = get_checkpoint(self.network_id, self.gen, -1)
@@ -437,6 +441,10 @@ class Network6(Network):
 class Network7(Network):
     def __init__(self, gen, checkpoint):
         Network.__init__(self, 7, gen, checkpoint)
+        
+        self.freq_loss = 0
+        self.time_loss = 1
+        self.uipt_loss = 1
         
         self.e1 = encoder1D_block(1, 16, kernel_size=25)
         self.e2 = encoder1D_block(16, 32, kernel_size=13)

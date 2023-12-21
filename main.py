@@ -122,16 +122,33 @@ def train(args):
             x1, x2 = model(audio)
             
             optimizer.zero_grad()
-            uiptloss = uiptcreiterion(x1, x2, target)
-            timeloss = timecriterion(x1, x2, target)
-            loss = uiptloss + timeloss
+            
+            if model.freq_loss > 0:
+                freqloss = freqcriterion(x1, x2, target.unsqueeze(0))
+            else:
+                freqloss = 0
+            if model.time_loss > 0:
+                timeloss = timecriterion(x1, x2, target.unsqueeze(0))
+            else:
+                timeloss = 0
+            if model.uipt_loss > 0:
+                uiptloss = uiptcreiterion(x1, x2, target.unsqueeze(0))
+            else:
+                uiptloss = 0
+            
+            loss = freqloss + timeloss + uiptloss
             loss.backward()
             optimizer.step()
             
             if args.log:
-                wandb.log({"loss": loss.detach().cpu().item(),
-                           "uiptloss": uiptloss.detach().cpu().item(),
-                           "timeloss": timeloss.detach().cpu().item()})
+                report = {}
+                if model.freq_loss > 0:
+                    report["freqloss"] = freqloss.detach().cpu().item()
+                if model.time_loss > 0:
+                    report["timeloss"] = timeloss.detach().cpu().item()
+                if model.uipt_loss > 0:
+                    report["uiptloss"] = uiptloss.detach().cpu().item()
+                wandb.log(report)
             
             if (i+1) % args.save == 0:
                 model.save()
@@ -145,6 +162,7 @@ def train(args):
         test_freq_loss = 0
         test_time_loss = 0
         test_uipt_loss = 0
+        test_loss = 0
         with torch.no_grad():
             for audio, target in tqdm(testdatasetloader):
                 audio = audio.to(device)
@@ -158,6 +176,8 @@ def train(args):
                 test_time_loss += timeloss.detach().cpu().item()
                 test_uipt_loss += uiptloss.detach().cpu().item()
                 
+                test_loss += model.freq_loss * freqloss + model.time_loss * timeloss + model.uipt_loss * uiptloss
+                
                 del audio, target, x1, x2
                 torch.cuda.empty_cache()
         model.save()
@@ -165,7 +185,8 @@ def train(args):
         if args.log:
             wandb.log({"test_freq_loss": test_freq_loss/len(testdatasetloader)},
                       {"test_time_loss": test_time_loss/len(testdatasetloader)},
-                      {"test_uipt_loss": test_uipt_loss/len(testdatasetloader)})
+                      {"test_uipt_loss": test_uipt_loss/len(testdatasetloader)},
+                      {"test_loss": test_loss/len(testdatasetloader)})
     
     if args.log:
         wandb.finish()
@@ -191,9 +212,27 @@ def compute(args):
     audio = audio.to(device).reshape(1, -1)
     x1, x2 = model(audio)
     
-    criterion = FreqDomainLoss()
+    timecriterion = TmeDomainLoss()
+    freqcriterion = FreqDomainLoss()
+    uiptcreiterion = uPITLoss()
     
-    loss = criterion(x1, x2, target.unsqueeze(0))
+    if model.freq_loss > 0:
+        freqloss = freqcriterion(x1, x2, target.unsqueeze(0))
+        print(f"Freq loss: {freqloss}")
+    else:
+        freqloss = 0
+    if model.time_loss > 0:
+        timeloss = timecriterion(x1, x2, target.unsqueeze(0))
+        print(f"Time loss: {timeloss}")
+    else:
+        timeloss = 0
+    if model.uipt_loss > 0:
+        uiptloss = uiptcreiterion(x1, x2, target.unsqueeze(0))
+        print(f"uPIT loss: {uiptloss}")
+    else:
+        uiptloss = 0
+    
+    loss = freqloss + timeloss + uiptloss
     
     print(f"Loss: {loss}")
     
