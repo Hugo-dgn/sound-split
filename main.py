@@ -128,10 +128,9 @@ def train(args):
             optimizer.step()
             
             if args.log:
-                wandb.log({"loss": loss.detach().cpu().item()})
-                
-                wandb.log({"freqloss": freqloss.detach().cpu().item()})
-                wandb.log({"timeloss": timeloss.detach().cpu().item()})
+                wandb.log({"loss": loss.detach().cpu().item(),
+                           "freqloss": freqloss.detach().cpu().item(),
+                           "timeloss": timeloss.detach().cpu().item()})
             
             if (i+1) % args.save == 0:
                 model.save()
@@ -188,7 +187,6 @@ def compute(args):
     loss = criterion(x1, x2, target.unsqueeze(0))
     
     print(f"Loss: {loss}")
-    print(f"Acuuracy: {1/(1+loss)}")
     
     x1 = x1.detach().numpy().squeeze()
     x2 = x2.detach().numpy().squeeze()

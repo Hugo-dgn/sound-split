@@ -372,7 +372,7 @@ class Network5(Network):
 
 class Network6(Network):
     def __init__(self, gen, checkpoint):
-        Network.__init__(self, 3, gen, checkpoint)
+        Network.__init__(self, 6, gen, checkpoint)
         
         self.e1 = encoder1D_block(1, 16, kernel_size=25)
         self.e2 = encoder1D_block(16, 32, kernel_size=13)
