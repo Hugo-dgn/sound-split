@@ -574,3 +574,43 @@ class Network9(Network):
         y1 = outputs[:,0,:]
         y2 = outputs[:,1,:]
         return y1, y2
+
+####################################################################################################
+
+class Network10(Network):
+    def __init__(self, gen, checkpoint):
+        Network.__init__(self, 10, gen, checkpoint)
+        
+        self.freq_loss = 0
+        self.time_loss = 0.1
+        self.uipt_loss = 1
+        
+        self.e1 = encoder1D_block(1, 4, kernel_size=51)
+        self.e2 = encoder1D_block(4, 8, kernel_size=21)
+        self.e3 = encoder1D_block(8, 16, kernel_size=13)
+        self.e4 = encoder1D_block(16, 32, kernel_size=5)
+        self.b = conv1D_block(32, 64, kernel_size=3)
+        self.d1 = decoder1D_block(64, 64, 32, kernel_size=3)
+        self.d2 = decoder1D_block(64, 32, 16, kernel_size=17)
+        self.d3 = decoder1D_block(32, 16, 8, kernel_size=25)
+        self.d4 = decoder1D_block(16, 8, 4, kernel_size=33)
+        self.outputs = nn.Conv1d(8, 2, kernel_size=1, padding=0)
+        
+        self.load()
+        
+    def forward(self, inputs):
+        inputs = inputs.unsqueeze(1)
+        s1, p1 = self.e1(inputs)
+        s2, p2 = self.e2(p1)
+        s3, p3 = self.e3(p2)
+        s4, p4 = self.e4(p3)
+        b = self.b(p4)
+        d1 = self.d1(b, s4)
+        d2 = self.d2(d1, s3)
+        d3 = self.d3(d2, s2)
+        d4 = self.d4(d3, s1)
+        outputs = self.outputs(d4)
+        
+        y1 = outputs[:,0,:]
+        y2 = outputs[:,1,:]
+        return y1, y2
