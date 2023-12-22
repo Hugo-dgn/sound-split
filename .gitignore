@@ -11,5 +11,6 @@ wandb/
 dgx.bash
 out.out1
 out.out2
+out.out3
 test_dataset/
 train_dataset/

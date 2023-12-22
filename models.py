@@ -485,7 +485,7 @@ class Network8(Network):
         Network.__init__(self, 8, gen, checkpoint)
         
         self.freq_loss = 0
-        self.time_loss = 0.1
+        self.time_loss = 1
         self.uipt_loss = 1
         
         self.e1 = encoder1D_block(1, 16, kernel_size=53)

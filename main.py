@@ -109,6 +109,9 @@ def train(args):
         resume="allow",
         config={
         "network": args.network,
+        "time_loss": model.time_loss,
+        "freq_loss": model.freq_loss,
+        "uipt_loss": model.uipt_loss,
         }
         )
     
@@ -184,10 +187,10 @@ def train(args):
         model.save()
         
         if args.log:
-            wandb.log({"test_freq_loss": test_freq_loss/len(testdatasetloader)},
-                      {"test_time_loss": test_time_loss/len(testdatasetloader)},
-                      {"test_uipt_loss": test_uipt_loss/len(testdatasetloader)},
-                      {"test_loss": test_loss/len(testdatasetloader)})
+            wandb.log({"test_freq_loss": test_freq_loss/len(testdatasetloader),
+                      "test_time_loss": test_time_loss/len(testdatasetloader),
+                      "test_uipt_loss": test_uipt_loss/len(testdatasetloader),
+                      "test_loss": test_loss/len(testdatasetloader)})
     
     if args.log:
         wandb.finish()
