@@ -90,6 +90,10 @@ class TmeDomainLoss(nn.Module):
     
     def forward(self, x1, x2, target):
         
+        x1 = x1 - torch.mean(x1, dim=1, keepdim=True)
+        x2 = x2 - torch.mean(x2, dim=1, keepdim=True)
+        target = target - torch.mean(target, dim=2, keepdim=True)
+        
         arrange11 = x1 - target[:,0,:]
         arrange12 = x1 - target[:,1,:]
         
@@ -280,6 +284,10 @@ class Network2(Network):
 class Network3(Network):
     def __init__(self, gen, checkpoint):
         Network.__init__(self, 3, gen, checkpoint)
+        
+        self.freq_loss = 0
+        self.time_loss = 0.1
+        self.uipt_loss = 1
         
         self.e1 = encoder1D_block(1, 16, kernel_size=25)
         self.e2 = encoder1D_block(16, 32, kernel_size=13)

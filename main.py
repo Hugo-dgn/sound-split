@@ -89,7 +89,7 @@ def train(args):
     model = model.to(device)
     
     dataset = loader.SoundDataset(TRAIN_DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition)
-    traindataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True, num_workers=4)
+    traindataloader = DataLoader(dataset, batch_size=args.batch, shuffle=True, num_workers=args.workers)
     
     testdataset = loader.SoundDataset(TEST_DATASET_PATH, length=args.length, reduce=args.reduce, partition=args.partition)
     testdatasetloader = DataLoader(testdataset, batch_size=args.batch, shuffle=False)
@@ -368,6 +368,8 @@ def main():
         "--log", help="log the training to wandb", action="store_true")
     train_parser.add_argument(
         "--save", help="number of step between each save", type=int, default=100)
+    train_parser.add_argument(
+        "--workers", help="number of workers", type=int, default=4)
     train_parser.set_defaults(func=train)
     
     info_parser = subparsers.add_parser(
