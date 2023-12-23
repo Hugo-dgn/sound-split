@@ -317,7 +317,7 @@ def clean(args):
     for gen in tqdm(gens):
         checkpoints = os.listdir(gen)
         if len(checkpoints) == 0:
-            pass
+            continue
         else:
             last_checkpoint = max([int(checkpoint.split(".")[0]) for checkpoint in checkpoints])
         if last_checkpoint == 0:
