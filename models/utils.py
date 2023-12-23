@@ -40,14 +40,14 @@ def check(network_id, gen):
     return gen
 
 class conv1D_block(nn.Module):
-    def __init__(self, in_c, out_c, kernel_size, num_conv):
+    def __init__(self, in_c, out_c, kernel_size, num_conv, activation):
         super().__init__()
         
         conv = []
         for _ in range(num_conv):
             conv.append(nn.Conv1d(in_c, out_c, kernel_size=kernel_size, padding="same"))
             conv.append(nn.BatchNorm1d(out_c))
-            conv.append(nn.Mish())
+            conv.append(activation())
             in_c = out_c
         self.conv = nn.Sequential(*conv)
         
@@ -56,9 +56,11 @@ class conv1D_block(nn.Module):
         return y
 
 class encoder1D_block(nn.Module):
-    def __init__(self, in_c, out_c, kernel_size, num_conv=2):
+    def __init__(self, in_c, out_c, kernel_size, num_conv=2, activation=None):
         super().__init__()
-        self.conv = conv1D_block(in_c, out_c, kernel_size, num_conv)
+        if activation is None:
+            activation = nn.Mish
+        self.conv = conv1D_block(in_c, out_c, kernel_size, num_conv, activation)
         self.pool = nn.MaxPool1d(kernel_size=2, stride=2)
     def forward(self, x):
         y = self.conv(x)
@@ -66,10 +68,12 @@ class encoder1D_block(nn.Module):
         return y, p
 
 class decoder1D_block(nn.Module):
-    def __init__(self, in_c, out_c, in_skip, kernel_size, num_conv=2):
+    def __init__(self, in_c, out_c, in_skip, kernel_size, num_conv=2, activation=None):
         super().__init__()
+        if activation is None:
+            activation = nn.Mish
         self.up = nn.ConvTranspose1d(in_c, out_c, kernel_size=2, stride=2, padding=0)
-        self.conv = conv1D_block(out_c+in_skip, out_c, kernel_size, num_conv)
+        self.conv = conv1D_block(out_c+in_skip, out_c, kernel_size, num_conv, activation)
     def forward(self, inputs, skip=None, length=None):
         x = self.up(inputs)
         if skip is not None:
