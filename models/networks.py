@@ -3,43 +3,9 @@ import os
 import torch
 import torch.nn as nn
 import torchaudio
-from torchmetrics.functional.audio import scale_invariant_signal_noise_ratio
 
-def get_checkpoint(network_id, gen, checkpoint):
-    network_path = os.path.join("save", str(network_id))
-    if gen == -1:
-        gen = max([int(gen) for gen in os.listdir(network_path)])
-    path = os.path.join(network_path, str(gen))
-    save_files = [int(file.split(".")[0]) for file in os.listdir(path)]
-    if len(save_files) == 0:
-        start_checkpoint = None
-    else:
-        if checkpoint == -1:
-            start_checkpoint = max(save_files)
-        else:
-            if checkpoint in save_files:
-                start_checkpoint = checkpoint
-            else:
-                message = f"Checkpoint {checkpoint} not found."
-                raise AssertionError(message)
-    return start_checkpoint
+from models.utils import get_checkpoint, check, conv1D_block, encoder1D_block, decoder1D_block
 
-def check(network_id, gen):
-    path_network = os.path.join("save", str(network_id))
-    if "save" not in os.listdir():
-        os.mkdir("save")
-    if str(network_id) not in os.listdir("save"):
-        os.mkdir(path_network)
-        
-    if gen == -1:
-        if len(os.listdir(path_network)) == 0:
-            gen = 0
-        else:
-            gen = max([int(gen.split(".")[0]) for gen in os.listdir(path_network)])
-    if str(gen) not in os.listdir(path_network):
-        os.mkdir(os.path.join(path_network, str(gen)))
-    
-    return gen
 
 def get_network(n):
     if f"Network{n}" in globals():
@@ -84,76 +50,6 @@ class Network(nn.Module):
 
 ####################################################################################################
 
-class TmeDomainLoss(nn.Module):
-    def __init__(self):
-        nn.Module.__init__(self)
-    
-    def forward(self, x1, x2, target):
-        
-        x1 = x1 - torch.mean(x1, dim=1, keepdim=True)
-        x2 = x2 - torch.mean(x2, dim=1, keepdim=True)
-        target = target - torch.mean(target, dim=2, keepdim=True)
-        
-        arrange11 = x1 - target[:,0,:]
-        arrange12 = x1 - target[:,1,:]
-        
-        arrange21 = x2 - target[:,0,:]
-        arrange22 = x2 - target[:,1,:]
-        
-        loss1 = torch.mean(arrange11**2, dim=1) + torch.mean(arrange22**2, dim=1)
-        loss2 = torch.mean(arrange12**2, dim=1) + torch.mean(arrange21**2, dim=1)
-        loss = torch.min(torch.stack([loss1, loss2], dim=1), dim=1).values
-        loss = torch.mean(loss)
-        
-        return loss
-
-class FreqDomainLoss(nn.Module):
-    def __init__(self):
-        nn.Module.__init__(self)
-    
-    def forward(self, x1, x2, target):
-        transform = torchaudio.transforms.Spectrogram(n_fft=512, hop_length=256, power=None).to(x1.device)
-        
-        spectro1 = transform(x1)
-        spectro2 = transform(x2)
-        spectro_target = transform(target)
-        
-        power1 = torch.abs(spectro1)
-        power2 = torch.abs(spectro2)
-        power_target = torch.abs(spectro_target)
-        
-        arrange11 = power1 - power_target[:,0,:,:]
-        arrange12 = power1 - power_target[:,1,:,:]
-        
-        arrange21 = power2 - power_target[:,0,:,:]
-        arrange22 = power2 - power_target[:,1,:,:]
-        
-        loss1 = torch.mean(arrange11**2, dim=(1,2)) + torch.mean(arrange22**2, dim=(1,2))
-        loss2 = torch.mean(arrange12**2, dim=(1,2)) + torch.mean(arrange21**2, dim=(1,2))
-        loss = torch.min(torch.stack([loss1, loss2], dim=1), dim=1).values
-        loss = torch.mean(loss)
-        
-        return loss
-
-class uPITLoss(nn.Module):
-    def __init__(self):
-        nn.Module.__init__(self)
-        self.eps = 1e-10
-    
-    def forward(self, x1, x2, target):
-        
-        p = torch.cat([x1.unsqueeze(1), x2.unsqueeze(1)], dim=1)
-        sisnr1 = torch.sum(scale_invariant_signal_noise_ratio(p, target), dim=1)
-        
-        p = torch.cat([x2.unsqueeze(1), x1.unsqueeze(1)], dim=1)
-        sisnr2 = torch.sum(scale_invariant_signal_noise_ratio(p, target), dim=1)
-        
-        sisnr = torch.max(torch.stack([sisnr1, sisnr2], dim=1), dim=1).values
-        
-        return torch.mean(-sisnr)
-
-####################################################################################################
-
 class Network1(Network):
     def __init__(self, gen, checkpoint):
         Network.__init__(self, 1, gen, checkpoint)
@@ -189,59 +85,6 @@ class Network1(Network):
         x2 = x - x1
         
         return x1.squeeze(1), x2.squeeze(1)
-        
-####################################################################################################
-
-class conv1D_block(nn.Module):
-    def __init__(self, in_c, out_c, kernel_size):
-        super().__init__()
-        self.network = nn.Sequential(
-            nn.Conv1d(in_c, out_c, kernel_size=kernel_size, padding="same"),
-            nn.BatchNorm1d(out_c),
-            nn.Mish(),
-            nn.Conv1d(out_c, out_c, kernel_size=kernel_size, padding="same"),
-            nn.BatchNorm1d(out_c),
-            nn.Mish()
-        )
-    def forward(self, x):
-        y = self.network(x)
-        return y
-
-class encoder1D_block(nn.Module):
-    def __init__(self, in_c, out_c, kernel_size):
-        super().__init__()
-        self.conv = conv1D_block(in_c, out_c, kernel_size)
-        self.pool = nn.MaxPool1d(kernel_size=2, stride=2)
-    def forward(self, x):
-        y = self.conv(x)
-        p = self.pool(y)
-        return y, p
-
-class decoder1D_block(nn.Module):
-    def __init__(self, in_c, out_c, in_skip, kernel_size):
-        super().__init__()
-        self.up = nn.ConvTranspose1d(in_c, out_c, kernel_size=2, stride=2, padding=0)
-        self.conv = conv1D_block(out_c+in_skip, out_c, kernel_size)
-    def forward(self, inputs, skip=None, length=None):
-        x = self.up(inputs)
-        if skip is not None:
-            min_size = min(x.shape[2], skip.shape[2])
-            max_size = max(x.shape[2], skip.shape[2])
-            delta = max_size - min_size
-            if delta > 0:
-                if x.shape[2] == min_size:
-                    x = nn.functional.pad(x, (0, delta))
-                else:
-                    skip = nn.functional.pad(skip, (0, delta))
-            x = torch.cat([x, skip], axis=1)
-        else:
-            if length is not None:
-                if x.shape[2] > length:
-                    x = x[:,:,:length]
-                elif x.shape[2] < length:
-                    x = nn.functional.pad(x, (0, length-x.shape[2]))
-        x = self.conv(x)
-        return x
 
 ####################################################################################################
 
@@ -614,3 +457,47 @@ class Network10(Network):
         y1 = outputs[:,0,:]
         y2 = outputs[:,1,:]
         return y1, y2
+
+####################################################################################################
+
+class Network11(Network):
+    def __init__(self, gen, checkpoint):
+        Network.__init__(self, 11, gen, checkpoint)
+        
+        self.freq_loss = 0
+        self.time_loss = 0
+        self.uipt_loss = 1
+        
+        self.e1 = encoder1D_block(1, 4, kernel_size=51, num_conv=1)
+        self.e2 = encoder1D_block(4, 8, kernel_size=21, num_conv=1)
+        self.e3 = encoder1D_block(8, 16, kernel_size=13, num_conv=1)
+        self.e4 = encoder1D_block(16, 32, kernel_size=5, num_conv=1)
+        
+        self.separator = nn.LSTM(input_size=32, hidden_size=16, num_layers=2, batch_first=True, bidirectional=True)
+        
+        
+        self.d1 = decoder1D_block(32, 16, 0, kernel_size=3, num_conv=1)
+        self.d2 = decoder1D_block(16, 8, 0, kernel_size=17, num_conv=1)
+        self.d3 = decoder1D_block(8, 4, 0, kernel_size=25, num_conv=1)
+        self.d4 = decoder1D_block(4, 1, 0, kernel_size=33, num_conv=1)
+        
+        self.load()
+    
+    def forward(self, inputs):
+        inputs = inputs.unsqueeze(1)
+        s1, p1 = self.e1(inputs)
+        s2, p2 = self.e2(p1)
+        s3, p3 = self.e3(p2)
+        s4, p4 = self.e4(p3)
+        
+        m = torch.transpose(self.separator(torch.transpose(p4, 1, 2))[0], 1, 2)
+        b = m*p4
+        
+        d1 = self.d1(b, length=s4.shape[2])
+        d2 = self.d2(d1, length=s3.shape[2])
+        d3 = self.d3(d2, length=s2.shape[2])
+        y1 = self.d4(d3, length=s1.shape[2])
+        
+        y2 = inputs - y1
+        
+        return y1.squeeze(1), y2.squeeze(1)

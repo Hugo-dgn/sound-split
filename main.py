@@ -23,7 +23,8 @@ except OSError as e:
     SOUND = False
 
 import loader
-from models import get_network, FreqDomainLoss, TmeDomainLoss, uPITLoss
+from models import get_network
+from loss import TmeDomainLoss, FreqDomainLoss, uPITLoss
 
 def listen(args):
     if not SOUND:
