@@ -258,7 +258,7 @@ def compute(args):
         
         if args.audio == 0:
             print("Playing combined audio")
-            sd.play(x1+x2, SAMPLE_RATE, blocking=True)
+            sd.play(y1+y2, SAMPLE_RATE, blocking=True)
         elif args.audio == 1:
             print("Playing predicted audio 1")
             sd.play(x1, SAMPLE_RATE, blocking=True)
@@ -396,7 +396,7 @@ def main():
     compute_parser.add_argument(
         "--id", help="id of the audio", type=int, default=0)
     compute_parser.add_argument(
-        "--audio", help="Which audio to play : 0 for combined audio, 1 and 2 for individual audio", type=int, choices=[0, 1, 2], default=0)
+        "--audio", help="Which audio to play : 0 for combined audio, 1 and 2 for individual audio", type=int, choices=[0, 1, 2])
     compute_parser.add_argument(
         "--plot", help="plot the audio", action="store_true")
     compute_parser.add_argument(
