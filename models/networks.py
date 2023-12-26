@@ -570,11 +570,11 @@ class Network13(Network):
         self.d3 = decoder1D_block(8, 4, 0, kernel_size=25, num_conv=1)
         self.d4 = decoder1D_block(4, 2, 0, kernel_size=33, num_conv=1, activation=nn.Identity)
         
-        self.load()
-        
         working_freq = 8000
         self.transform = torchaudio.transforms.Resample(16000, working_freq)
         self.inverse_transform = torchaudio.transforms.Resample(working_freq, 16000)
+        
+        self.load()
     
     def forward(self, inputs):
         
