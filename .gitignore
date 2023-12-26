@@ -9,8 +9,6 @@ job.batch
 out.out
 wandb/
 dgx.bash
-out.out1
-out.out2
-out.out3
+out.out*
 test_dataset/
 train_dataset/
