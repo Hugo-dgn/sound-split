@@ -545,3 +545,57 @@ class Network12(Network):
         y2 = inputs - y1
         
         return y1.squeeze(1), y2.squeeze(1)
+
+
+####################################################################################################
+
+class Network13(Network):
+    def __init__(self, gen, checkpoint):
+        Network.__init__(self, 13, gen, checkpoint)
+        
+        self.freq_loss = 0
+        self.time_loss = 0
+        self.uipt_loss = 1
+        
+        self.e1 = encoder1D_block(1, 4, kernel_size=51, num_conv=1)
+        self.e2 = encoder1D_block(4, 8, kernel_size=21, num_conv=1)
+        self.e3 = encoder1D_block(8, 16, kernel_size=13, num_conv=1)
+        self.e4 = encoder1D_block(16, 32, kernel_size=5, num_conv=1)
+        
+        self.separator = nn.LSTM(input_size=32, hidden_size=16, num_layers=2, batch_first=True, bidirectional=True)
+        
+        
+        self.d1 = decoder1D_block(32, 16, 0, kernel_size=3, num_conv=1)
+        self.d2 = decoder1D_block(16, 8, 0, kernel_size=17, num_conv=1)
+        self.d3 = decoder1D_block(8, 4, 0, kernel_size=25, num_conv=1)
+        self.d4 = decoder1D_block(4, 2, 0, kernel_size=33, num_conv=1, activation=nn.Identity)
+        
+        self.load()
+        
+        working_freq = 8000
+        self.transform = torchaudio.transforms.Resample(16000, working_freq)
+        self.inverse_transform = torchaudio.transforms.Resample(working_freq, 16000)
+    
+    def forward(self, inputs):
+        
+        inputs = self.transform(inputs)
+        inputs = inputs.unsqueeze(1)
+        s1, p1 = self.e1(inputs)
+        s2, p2 = self.e2(p1)
+        s3, p3 = self.e3(p2)
+        s4, p4 = self.e4(p3)
+        
+        m = torch.transpose(self.separator(torch.transpose(p4, 1, 2))[0], 1, 2)
+        b = m*p4
+        
+        d1 = self.d1(b, length=s4.shape[2])
+        d2 = self.d2(d1, length=s3.shape[2])
+        d3 = self.d3(d2, length=s2.shape[2])
+        y = self.d4(d3, length=s1.shape[2])
+        
+        y = self.inverse_transform(y)
+        
+        y1 = y[:,0,:]
+        y2 = y[:,1,:]
+        
+        return y1, y2

@@ -346,6 +346,8 @@ def main():
     train_parser = subparsers.add_parser(
         "train", help="Train the model")
     train_parser.add_argument(
+        "network", help="network topology", type=int, default=1)
+    train_parser.add_argument(
         "--length", help="length of the audio signal", type=int, default=32000)
     train_parser.add_argument(
         "--epochs", help="number of epochs", type=int, default=10)
@@ -355,8 +357,6 @@ def main():
         "--reduce", help="reduce the dataset size by this percent", type=float, default=0)
     train_parser.add_argument(
         "--partition", help="number of partitions", type=int, default=1)
-    train_parser.add_argument(
-        "--network", help="network topology", type=int, default=1)
     train_parser.add_argument(
         "--gen", help="network generation", type=int, default=-1)
     train_parser.add_argument(
@@ -376,9 +376,9 @@ def main():
     info_parser = subparsers.add_parser(
         "info", help="Display model information")
     info_parser.add_argument(
-        "--length", help="length of the audio signal", type=int, default=32000)
+        "network", help="network topology", type=int, default=1)
     info_parser.add_argument(
-        "--network", help="network topology", type=int, default=1)
+        "--length", help="length of the audio signal", type=int, default=32000)
     info_parser.add_argument(
         "--gen", help="network generation", type=int, default=-1)
     info_parser.add_argument(
@@ -388,9 +388,9 @@ def main():
     compute_parser = subparsers.add_parser(
         "compute", help="Compute the output of the model")
     compute_parser.add_argument(
-        "--length", help="length of the audio signal", type=int, default=32000)
+        "network", help="network topology", type=int, default=1)
     compute_parser.add_argument(
-        "--network", help="network topology", type=int, default=1)
+        "--length", help="length of the audio signal", type=int, default=32000)
     compute_parser.add_argument(
         "--id", help="id of the audio", type=int, default=0)
     compute_parser.add_argument(
