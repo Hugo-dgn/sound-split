@@ -256,7 +256,10 @@ def compute(args):
         print(message)
     else:
         
-        if args.audio == 1:
+        if args.audio == 0:
+            print("Playing combined audio")
+            sd.play(x1+x2, SAMPLE_RATE, blocking=True)
+        elif args.audio == 1:
             print("Playing predicted audio 1")
             sd.play(x1, SAMPLE_RATE, blocking=True)
             print("Playing audio 1")
@@ -264,8 +267,7 @@ def compute(args):
                 sd.play(y1, SAMPLE_RATE, blocking=True)
             else:
                 sd.play(y2, SAMPLE_RATE, blocking=True)
-        
-        if args.audio == 2:
+        elif args.audio == 2:
             print("Playing audio 2")
             sd.play(x2, SAMPLE_RATE, blocking=True)
             print("Playing audio 2")
