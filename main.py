@@ -262,19 +262,9 @@ def compute(args):
         elif args.audio == 1:
             print("Playing predicted audio 1")
             sd.play(x1, SAMPLE_RATE, blocking=True)
-            print("Playing audio 1")
-            if l1 < l2:
-                sd.play(y1, SAMPLE_RATE, blocking=True)
-            else:
-                sd.play(y2, SAMPLE_RATE, blocking=True)
         elif args.audio == 2:
-            print("Playing audio 2")
+            print("Playing predicted audio 2")
             sd.play(x2, SAMPLE_RATE, blocking=True)
-            print("Playing audio 2")
-            if l1 > l2:
-                sd.play(y1, SAMPLE_RATE, blocking=True)
-            else:
-                sd.play(y2, SAMPLE_RATE, blocking=True)
             
     if args.plot:
         
