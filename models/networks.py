@@ -812,7 +812,66 @@ class Network17(Network):
         d3 = self.d3(d2, s2)
         y = self.d4(d3, s1)
         
-        #normalize y with variance 1 and mean 0 on dim 2
+        y = (y - torch.mean(y, dim=2, keepdim=True)) / torch.std(y, dim=2, keepdim=True)
+        y = torch.std(inputs, dim=2, keepdim=True) * y + torch.mean(inputs, dim=2, keepdim=True)
+        
+        
+        y = self.inverse_transform(y)
+        
+        y1 = y[:,0,:]
+        y2 = y[:,1,:]
+        
+        return y1, y2
+
+####################################################################################################
+
+class Network18(Network):
+    def __init__(self, gen, checkpoint):
+        Network.__init__(self, 18, gen, checkpoint)
+        
+        self.freq_loss = 0
+        self.time_loss = 0
+        self.uipt_loss = 1
+        
+        self.e1 = encoder1D_block(1, 4, kernel_size=51, num_conv=1)
+        self.e2 = encoder1D_block(4, 8, kernel_size=21, num_conv=1)
+        self.e3 = encoder1D_block(8, 16, kernel_size=13, num_conv=1)
+        self.e4 = encoder1D_block(16, 32, kernel_size=5, num_conv=1)
+        self.e5 = encoder1D_block(32, 64, kernel_size=5, num_conv=1)
+        
+        self.separator = nn.LSTM(input_size=64, hidden_size=32, num_layers=2, batch_first=True, bidirectional=True)
+        
+        self.d1 = decoder1D_block(64, 32, 64, kernel_size=3, num_conv=1)
+        self.d2 = decoder1D_block(32, 16, 32, kernel_size=5, num_conv=1)
+        self.d3 = decoder1D_block(16, 8, 16, kernel_size=7, num_conv=1)
+        self.d4 = decoder1D_block(8, 4, 8, kernel_size=11, num_conv=1)
+        self.d5 = decoder1D_block(4, 2, 4, kernel_size=15, num_conv=1, activation=nn.Identity, normalize=False)
+        
+        working_freq = 8000
+        self.transform = torchaudio.transforms.Resample(16000, working_freq)
+        self.inverse_transform = torchaudio.transforms.Resample(working_freq, 16000)
+        
+        self.load()
+    
+    def forward(self, inputs):
+        
+        inputs = self.transform(inputs)
+        inputs = inputs.unsqueeze(1)
+        s1, p1 = self.e1(inputs)
+        s2, p2 = self.e2(p1)
+        s3, p3 = self.e3(p2)
+        s4, p4 = self.e4(p3)
+        s5, p5 = self.e5(p4)
+        
+        m = torch.transpose(self.separator(torch.transpose(p5, 1, 2))[0], 1, 2)
+        b = m*p5
+        
+        d1 = self.d1(b, s5)
+        d2 = self.d2(d1, s4)
+        d3 = self.d3(d2, s3)
+        d4 = self.d4(d3, s2)
+        y = self.d5(d4, s1)
+        
         y = (y - torch.mean(y, dim=2, keepdim=True)) / torch.std(y, dim=2, keepdim=True)
         y = torch.std(inputs, dim=2, keepdim=True) * y + torch.mean(inputs, dim=2, keepdim=True)
         
